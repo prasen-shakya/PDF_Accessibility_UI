@@ -8,7 +8,7 @@ cognito_client = boto3.client('cognito-idp')
 
 # ======== Hardcoded Configuration ========
 ###########################################
-USER_POOL_ID = 'us-east-1_zXnwKoQ8k'  # Replace with your Cognito User Pool ID
+USER_POOL_ID = ''  # Replace with your Cognito User Pool ID
 
 # For manual invocation only
 GROUP_NAME = 'AdminUsers'  # Example group name for manual usage

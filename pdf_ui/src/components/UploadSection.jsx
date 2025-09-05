@@ -202,11 +202,15 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       // **4. Call the Usage API to Increment**
       const usageRes = await fetch(CheckAndIncrementQuota, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`
         },
-        body: JSON.stringify({ sub: userSub, mode: 'increment' }),
+        body: JSON.stringify({
+          sub: userSub,
+          mode: 'increment',
+          conversionType: selectedFormat
+        }),
       });
 
       if (!usageRes.ok) {

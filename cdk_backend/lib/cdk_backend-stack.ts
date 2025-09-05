@@ -56,7 +56,7 @@ export class CdkBackendStack extends cdk.Stack {
       stage: 'PRODUCTION'
     });
 
-    const domainPrefix = 'pdf-ui-auth'; // must be globally unique in that region
+    const domainPrefix = `pdf-ui-auth${Math.floor(Date.now() / 1000)}`; // must be globally unique in that region, only numbers added
     const Default_Group = 'DefaultUsers';
     const Amazon_Group = 'AmazonUsers';
     const Admin_Group = 'AdminUsers';

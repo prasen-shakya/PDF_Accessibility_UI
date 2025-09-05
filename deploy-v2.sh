@@ -91,15 +91,7 @@ if [ -n "${PDF_TO_HTML_BUCKET:-}" ]; then
     }'
 fi
 
-# Add PROJECT_TIMESTAMP for SSM parameter naming
-if [ -n "$ENV_VARS_ARRAY" ]; then
-  ENV_VARS_ARRAY="$ENV_VARS_ARRAY,"
-fi
-ENV_VARS_ARRAY="$ENV_VARS_ARRAY"'{
-    "name":  "PROJECT_TIMESTAMP",
-    "value": "'"$TIMESTAMP"'",
-    "type":  "PLAINTEXT"
-  }'
+# Note: PROJECT_TIMESTAMP no longer needed since we get deployment info from CloudFormation outputs
 
 BACKEND_ENVIRONMENT='{
   "type": "LINUX_CONTAINER",
@@ -175,18 +167,12 @@ echo "✅ Backend build completed successfully!"
 FRONTEND_PROJECT_NAME="${PROJECT_NAME}-frontend"
 echo "Creating Frontend CodeBuild project: $FRONTEND_PROJECT_NAME"
 
-# Frontend environment variables (only needs PROJECT_TIMESTAMP)
-FRONTEND_ENV_VARS='{
-    "name":  "PROJECT_TIMESTAMP",
-    "value": "'"$TIMESTAMP"'",
-    "type":  "PLAINTEXT"
-  }'
-
+# Frontend environment variables (no longer needs PROJECT_TIMESTAMP)
 FRONTEND_ENVIRONMENT='{
   "type": "LINUX_CONTAINER",
   "image": "aws/codebuild/amazonlinux-x86_64-standard:5.0",
   "computeType": "BUILD_GENERAL1_MEDIUM",
-  "environmentVariables": ['"$FRONTEND_ENV_VARS"']
+  "environmentVariables": []
 }'
 
 # Frontend buildspec
@@ -252,26 +238,26 @@ echo "✅ Frontend build completed successfully!"
 
 echo "🔍 Retrieving final deployment information..."
 
-AMPLIFY_APP_ID=$(aws ssm get-parameter \
-  --name "/pdf-ui/$TIMESTAMP/amplify-app-id" \
-  --query 'Parameter.Value' \
+STACK_NAME="CdkBackendStack"
+echo "CDK Stack Name: $STACK_NAME"
+
+# Get Amplify App ID from CloudFormation outputs
+AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
   --output text)
 
-STACK_NAME=$(aws ssm get-parameter \
-  --name "/pdf-ui/$TIMESTAMP/stack-name" \
-  --query 'Parameter.Value' \
-  --output text)
+if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then
+  echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
+  echo "Available outputs:"
+  aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs'
+  exit 1
+fi
+
+echo "✅ Found Amplify App ID: $AMPLIFY_APP_ID"
 
 # --------------------------------------------------
-# 8. Cleanup SSM Parameters
-# --------------------------------------------------
-
-echo "🧹 Cleaning up temporary SSM parameters..."
-aws ssm delete-parameter --name "/pdf-ui/$TIMESTAMP/amplify-app-id" >/dev/null 2>&1 || true
-aws ssm delete-parameter --name "/pdf-ui/$TIMESTAMP/stack-name" >/dev/null 2>&1 || true
-
-# --------------------------------------------------
-# 9. Final Summary
+# 8. Final Summary
 # --------------------------------------------------
 
 echo ""

@@ -4,16 +4,10 @@ phases:
   install:
     runtime-versions:
       nodejs: 20
+      python: 3.9
     commands:
       - echo "Installing zip utility..."
       - yum install -y zip
-      - echo "Retrieving deployment info from SSM Parameter Store..."
-      - >-
-        export AMPLIFY_APP_ID=$(aws ssm get-parameter \
-          --name "/pdf-ui/$PROJECT_TIMESTAMP/amplify-app-id" \
-          --query 'Parameter.Value' \
-          --output text)
-      - echo "Retrieved Amplify App ID: $AMPLIFY_APP_ID"
       - echo "Changing into pdf_ui directory"
       - cd pdf_ui
 
@@ -33,6 +27,20 @@ phases:
   post_build:
     commands:
       - echo "🚀 Deploying frontend to Amplify..."
+      - STACK_NAME="CdkBackendStack"
+      - echo "Extracting Amplify App ID from CloudFormation outputs..."
+      - >-
+        export AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
+          --stack-name $STACK_NAME \
+          --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
+          --output text)
+      - |
+        if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then
+          echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
+          echo "Available outputs:"
+          aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs'
+          exit 1
+        fi
       - echo "Creating Amplify deployment..."
       - >-
         aws amplify create-deployment \
@@ -44,8 +52,6 @@ phases:
         export UPLOAD_URL=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['zipUploadUrl'])")
       - >-
         export JOB_ID=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['jobId'])")
-      - echo "Upload URL: $UPLOAD_URL"
-      - echo "Job ID: $JOB_ID"
       - echo "Uploading frontend.zip to Amplify..."
       - curl -X PUT -T frontend.zip "$UPLOAD_URL"
       - echo "Starting deployment..."

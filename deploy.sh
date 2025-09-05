@@ -176,8 +176,10 @@ echo "✅ Build completed successfully!"
 
 echo "🔍 Extracting Amplify App ID from CDK stack outputs..."
 
-# Get the stack name (assuming it's the default CDK stack name)
+# Install CDK dependencies and get the stack name
 cd cdk_backend
+echo "Installing CDK dependencies..."
+npm ci
 STACK_NAME=$(cdk list | head -1)
 cd ..
 echo "CDK Stack Name: $STACK_NAME"

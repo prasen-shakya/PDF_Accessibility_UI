@@ -34,6 +34,7 @@ phases:
           --stack-name $STACK_NAME \
           --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue | [0]' \
           --output text)
+      - echo $AMPLIFY_APP_ID
       - |
         if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then
           echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"

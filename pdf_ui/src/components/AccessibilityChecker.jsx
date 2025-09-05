@@ -1,5 +1,5 @@
 // src/components/AccessibilityChecker.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button,
   Dialog,
@@ -17,11 +17,11 @@ import {
   TableBody,
   CircularProgress,
   Box,
-  IconButton,
   Chip,
+  IconButton,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import {
   S3Client,
@@ -30,11 +30,10 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-import { Bucket,region, } from '../utilities/constants';
+import { PDFBucket, region } from '../utilities/constants';
 
 
-function AccessibilityChecker({ originalFileName, updatedFilename, awsCredentials }) {
-  const [open, setOpen] = useState(false);
+function AccessibilityChecker({ originalFileName, updatedFilename, awsCredentials, open, onClose }) {
 
   // Reports in JSON form
   const [beforeReport, setBeforeReport] = useState(null);
@@ -48,8 +47,6 @@ function AccessibilityChecker({ originalFileName, updatedFilename, awsCredential
   const [isBeforeUrlLoading, setIsBeforeUrlLoading] = useState(false);
   const [isAfterUrlLoading, setIsAfterUrlLoading] = useState(false);
 
-  const [isPolling, setIsPolling] = useState(false);
-  const [pollingIntervalId, setPollingIntervalId] = useState(null);
 
   const UpdatedFileKeyWithoutExtension = updatedFilename ? updatedFilename.replace(/\.pdf$/i, '') : '';
   const beforeReportKey = `temp/${UpdatedFileKeyWithoutExtension}/accessability-report/${UpdatedFileKeyWithoutExtension}_accessibility_report_before_remidiation.json`;
@@ -59,24 +56,33 @@ function AccessibilityChecker({ originalFileName, updatedFilename, awsCredential
   const desiredFilenameBefore = `COMPLIANT_${OriginalFileKeyWithoutExtension}_before_remediation_accessibility_report.json`;
   const desiredFilenameAfter = `COMPLIANT_${OriginalFileKeyWithoutExtension}_after_remediation_accessibility_report.json`;
 
-  const s3 = new S3Client({
-    region,
-    credentials: {
-      accessKeyId: awsCredentials?.accessKeyId,
-      secretAccessKey: awsCredentials?.secretAccessKey,
-      sessionToken: awsCredentials?.sessionToken,
-    },
-  });
+  const s3 = useMemo(() => {
+    if (!awsCredentials?.accessKeyId) {
+      console.warn('AWS credentials not available yet');
+      return null;
+    }
+    return new S3Client({
+      region,
+      credentials: {
+        accessKeyId: awsCredentials.accessKeyId,
+        secretAccessKey: awsCredentials.secretAccessKey,
+        sessionToken: awsCredentials.sessionToken,
+      },
+    });
+  }, [awsCredentials]);
 
   /**
    * Utility to fetch the JSON file from S3 (assuming it exists).
    */
-  const fetchJsonFromS3 = async (key) => {
-    await s3.send(new HeadObjectCommand({ Bucket: Bucket, Key: key }));
-    const getObjRes = await s3.send(new GetObjectCommand({ Bucket: Bucket, Key: key }));
+  const fetchJsonFromS3 = useCallback(async (key) => {
+    if (!s3) {
+      throw new Error('S3 client not initialized - check environment variables and AWS credentials');
+    }
+    await s3.send(new HeadObjectCommand({ Bucket: PDFBucket, Key: key }));
+    const getObjRes = await s3.send(new GetObjectCommand({ Bucket: PDFBucket, Key: key }));
     const bodyString = await getObjRes.Body.transformToString();
     return JSON.parse(bodyString);
-  };
+  }, [s3]);
 
   /**
  * Generate a presigned URL to directly download the JSON report from S3 with a specified filename.
@@ -85,88 +91,110 @@ function AccessibilityChecker({ originalFileName, updatedFilename, awsCredential
  * @returns {Promise<string>} - The presigned URL.
  */
 
-const generatePresignedUrl = async (key, filename) => {
+const generatePresignedUrl = useCallback(async (key, filename) => {
+  if (!s3) {
+    throw new Error('S3 client not initialized - check environment variables and AWS credentials');
+  }
   const command = new GetObjectCommand({
-    Bucket: Bucket,
+    Bucket: PDFBucket,
     Key: key,
     ResponseContentDisposition: `attachment; filename="${filename}"`,
   });
   return await getSignedUrl(s3, command, { expiresIn: 30000 }); // 8.33 hour expiration
-};
+}, [s3]);
 
   /**
-   * Fetch the "before" report
+   * Fetch the "before" report with retry mechanism
    */
-  const fetchBeforeReport = async () => {
-    try {
-      // First fetch the JSON data
-      const data = await fetchJsonFromS3(beforeReportKey);
-      setBeforeReport(data);
-      
-      // Then generate a presigned URL for that JSON file
-      setIsBeforeUrlLoading(true);
-      const presignedUrl = await generatePresignedUrl(beforeReportKey,desiredFilenameBefore);
-      setBeforeReportUrl(presignedUrl);
-    } catch (error) {
-      console.error('Error fetching BEFORE report from S3:', error);
-    } finally {
-      setIsBeforeUrlLoading(false);
+  const fetchBeforeReport = useCallback(async (retries = 3) => {
+    // Check if S3 client is available
+    if (!s3) {
+      console.error('Cannot fetch BEFORE report - S3 client not initialized');
+      return;
     }
-  };
 
-  /**
-   * Poll for the "after" report until it is available, then clear the interval
-   */
-  const fetchAfterReport = async () => {
-    try {
-      // Fetch the JSON data
-      const data = await fetchJsonFromS3(afterReportKey);
-      setAfterReport(data);
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        // First fetch the JSON data
+        const data = await fetchJsonFromS3(beforeReportKey);
+        setBeforeReport(data);
 
-      // Generate a presigned URL for downloading the AFTER report
-      setIsAfterUrlLoading(true);
-      const presignedUrl = await generatePresignedUrl(afterReportKey,desiredFilenameAfter);
-      setAfterReportUrl(presignedUrl);
-
-      // Stop polling since file now exists
-      clearInterval(pollingIntervalId);
-      setIsPolling(false);
-    } catch (error) {
-      console.log('AFTER report not ready. Continuing to poll...', error);
-    } finally {
-      setIsAfterUrlLoading(false);
+        // Then generate a presigned URL for that JSON file
+        setIsBeforeUrlLoading(true);
+        const presignedUrl = await generatePresignedUrl(beforeReportKey, desiredFilenameBefore);
+        setBeforeReportUrl(presignedUrl);
+        return; // Success, exit the retry loop
+      } catch (error) {
+        console.log(`Attempt ${attempt}/${retries} failed for BEFORE report:`, error.message);
+        if (attempt === retries) {
+          console.error('All attempts failed for BEFORE report');
+        } else {
+          // Wait 2 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } finally {
+        setIsBeforeUrlLoading(false);
+      }
     }
-  };
+  }, [beforeReportKey, desiredFilenameBefore, fetchJsonFromS3, generatePresignedUrl, s3]);
 
   /**
-   * Open the dialog, fetch the "before" report, and start polling for the "after" report.
+   * Fetch the "after" report with retry mechanism
    */
-  const handleOpen = () => {
-    setOpen(true);
-    setIsPolling(true);
-    fetchBeforeReport();
-    fetchAfterReport();
-    const intervalId = setInterval(fetchAfterReport, 15000);
-    setPollingIntervalId(intervalId);
-  };
+  const fetchAfterReport = useCallback(async (retries = 3) => {
+    // Check if S3 client is available
+    if (!s3) {
+      console.error('Cannot fetch AFTER report - S3 client not initialized');
+      return;
+    }
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        // Fetch the JSON data
+        const data = await fetchJsonFromS3(afterReportKey);
+        setAfterReport(data);
+
+        // Generate a presigned URL for downloading the AFTER report
+        setIsAfterUrlLoading(true);
+        const presignedUrl = await generatePresignedUrl(afterReportKey, desiredFilenameAfter);
+        setAfterReportUrl(presignedUrl);
+
+        return; // Success, exit the retry loop
+      } catch (error) {
+        console.log(`Attempt ${attempt}/${retries} failed for AFTER report:`, error.message);
+        if (attempt === retries) {
+          console.error('All attempts failed for AFTER report');
+        } else {
+          // Wait 2 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } finally {
+        setIsAfterUrlLoading(false);
+      }
+    }
+  }, [afterReportKey, desiredFilenameAfter, fetchJsonFromS3, generatePresignedUrl, s3]);
+
 
   /**
-   * Close the dialog, clearing any polling intervals.
+   * Handle dialog close
    */
   const handleClose = () => {
-    setOpen(false);
-    clearInterval(pollingIntervalId);
-    setIsPolling(false);
+    onClose();
   };
 
+
   /**
-   * Cleanup polling interval on unmount
+   * Fetch reports when dialog opens
    */
   useEffect(() => {
-    return () => {
-      if (pollingIntervalId) clearInterval(pollingIntervalId);
-    };
-  }, [pollingIntervalId]);
+    if (open && updatedFilename && s3) {
+      console.log('Dialog opened, fetching reports...');
+      fetchBeforeReport();
+      fetchAfterReport();
+    } else if (open && updatedFilename && !s3) {
+      console.error('Cannot fetch reports - S3 client not available');
+    }
+  }, [open, updatedFilename, fetchBeforeReport, fetchAfterReport, s3]);
 
   /**
    * Renders a summary table (Before/After) if available
@@ -293,21 +321,46 @@ const generatePresignedUrl = async (key, filename) => {
   };
 
   return (
-    <>
-      {updatedFilename && (
-        <Button variant="contained" color="primary" onClick={handleOpen} sx={{ marginTop: 2 }}>
-          Check PDF Accessibility
-        </Button>
-      )}
-
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" sx={{ flex: 1 }}>
           Accessibility Reports (Results By Adobe Accessibility Checker)
-          <IconButton onClick={handleClose}>
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* Download BEFORE JSON button */}
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            disabled={!beforeReportUrl || isBeforeUrlLoading}
+            onClick={() => window.open(beforeReportUrl, '_blank')}
+            startIcon={isBeforeUrlLoading && <CircularProgress size={14} />}
+            sx={{ fontSize: '0.75rem', padding: '4px 8px' }}
+          >
+            Before
+          </Button>
+
+          {/* Download AFTER JSON button */}
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            disabled={!afterReportUrl || isAfterUrlLoading}
+            onClick={() => window.open(afterReportUrl, '_blank')}
+            startIcon={isAfterUrlLoading && <CircularProgress size={14} />}
+            sx={{ fontSize: '0.75rem', padding: '4px 8px' }}
+          >
+            After
+          </Button>
+
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+      <Box>
           <Box sx={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
             {renderSummary(beforeReport, 'Before')}
             {renderSummary(afterReport, 'After')}
@@ -316,44 +369,22 @@ const generatePresignedUrl = async (key, filename) => {
           <Typography variant="h5" sx={{ marginTop: '2rem', color: '#1565c0', fontWeight: 'bold' }}>
             Detailed Report
           </Typography>
-          {isPolling && !afterReport && (
+          {(!beforeReport || !afterReport) && (
             <Typography variant="body2" color="textSecondary">
-              Generating remediated PDF report (updating every 15s)...
+              Loading accessibility reports...
             </Typography>
           )}
 
-          <Box sx={{ marginTop: '1rem' }}>{renderDetailedReport()}</Box>
-        </DialogContent>
+        <Box sx={{ marginTop: '1rem' }}>{renderDetailedReport()}</Box>
+      </Box>
+      </DialogContent>
 
-        <DialogActions sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '1rem' }}>
-          {/* Download BEFORE JSON button */}
-          <Button
-            variant="outlined"
-            color="primary"
-            disabled={!beforeReportUrl || isBeforeUrlLoading}
-            onClick={() => window.open(beforeReportUrl, '_blank')}
-            startIcon={isBeforeUrlLoading && <CircularProgress size={16} />}
-          >
-            Download Before Report
-          </Button>
-
-          {/* Download AFTER JSON button */}
-          <Button
-            variant="outlined"
-            color="primary"
-            disabled={!afterReportUrl || isAfterUrlLoading}
-            onClick={() => window.open(afterReportUrl, '_blank')}
-            startIcon={isAfterUrlLoading && <CircularProgress size={16} />}
-          >
-            Download After Report
-          </Button>
-
-          <Button onClick={handleClose} color="secondary" variant="contained">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+      <DialogActions sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, padding: '1rem' }}>
+        <Button onClick={handleClose} color="secondary" variant="contained">
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

@@ -348,6 +348,10 @@ export class CdkBackendStack extends cdk.Stack {
     mainBranch.addEnvironment('REACT_APP_BUCKET_NAME', bucket.bucketName);
     mainBranch.addEnvironment('REACT_APP_BUCKET_REGION', this.region);
     mainBranch.addEnvironment('REACT_APP_AWS_REGION', this.region);
+
+    // Separate buckets for different formats (can be configured to use different buckets)
+    mainBranch.addEnvironment('REACT_APP_PDF_BUCKET_NAME', bucket.bucketName);
+    mainBranch.addEnvironment('REACT_APP_HTML_BUCKET_NAME', bucket.bucketName);
     
     mainBranch.addEnvironment('REACT_APP_USER_POOL_ID', userPool.userPoolId);
     mainBranch.addEnvironment('REACT_APP_AUTHORITY', Authority);

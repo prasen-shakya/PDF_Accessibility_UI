@@ -8,6 +8,7 @@ const QueryCloudwatch = ({ filename, onStatusChange }) => {
   const [status, setStatus] = useState('Processing');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchLogData = async () => {
@@ -50,7 +51,9 @@ const QueryCloudwatch = ({ filename, onStatusChange }) => {
         const startQueryResponses = await Promise.all(startQueryCommands.map(command => client.send(command)));
         const queryIds = startQueryResponses.map(response => response.queryId);
 
-        const checkResults = async () => {
+        const checkResults = async (attemptCount = 0) => {
+          const MAX_RETRY_ATTEMPTS = 60; // Maximum 60 attempts (10 minutes at 10 second intervals)
+
           try {
             const getResultsCommands = queryIds.map(queryId => new GetQueryResultsCommand({ queryId }));
             const results = await Promise.all(getResultsCommands.map(command => client.send(command)));
@@ -82,12 +85,29 @@ const QueryCloudwatch = ({ filename, onStatusChange }) => {
               setError('Query failed');
               setLoading(false);
             } else {
-              setTimeout(checkResults, 10000); // Retry after 10 seconds
+              // Check if we've exceeded maximum retry attempts
+              if (attemptCount >= MAX_RETRY_ATTEMPTS) {
+                console.warn('Maximum retry attempts reached for CloudWatch query');
+                setError('Query timeout - unable to retrieve status');
+                setLoading(false);
+                return;
+              }
+
+              console.log(`CloudWatch query attempt ${attemptCount + 1}/${MAX_RETRY_ATTEMPTS}`);
+              setTimeout(() => checkResults(attemptCount + 1), 10000); // Retry after 10 seconds
             }
           } catch (err) {
             if (err.name === 'ThrottlingException') {
+              // Check retry limit for throttling as well
+              if (attemptCount >= MAX_RETRY_ATTEMPTS) {
+                console.warn('Maximum retry attempts reached after throttling');
+                setError('Query timeout due to rate limiting');
+                setLoading(false);
+                return;
+              }
+
               console.warn('Rate limit exceeded, retrying in 10 seconds');
-              setTimeout(checkResults, 10000);
+              setTimeout(() => checkResults(attemptCount + 1), 10000);
             } else {
               throw err;
             }
@@ -102,9 +122,10 @@ const QueryCloudwatch = ({ filename, onStatusChange }) => {
       }
     };
 
-    const intervalId = setInterval(fetchLogData, 10000); // Query every 10 seconds
+    // Start the initial query (no continuous polling)
+    fetchLogData();
 
-    return () => clearInterval(intervalId);
+    // No cleanup needed since we don't use intervals anymore
   }, [filename, onStatusChange]);
 
   if (loading) {

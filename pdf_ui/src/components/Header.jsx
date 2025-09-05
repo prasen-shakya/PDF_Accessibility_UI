@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import PropTypes from 'prop-types';
 import { HEADER_BACKGROUND } from '../utilities/constants';
+import logo from '../assets/pdf-accessability-logo.svg';
 
 function Header({ handleSignOut, usageCount, maxFilesAllowed, refreshUsage, usageError, loadingUsage }) {
   // Compute usage visually
@@ -31,11 +32,14 @@ function Header({ handleSignOut, usageCount, maxFilesAllowed, refreshUsage, usag
     <AppBar position="static" color={HEADER_BACKGROUND} role="banner" aria-label="Application Header">
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* Left Side: App Title */}
+        {/* Left Side: App Title with Logo */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h6" component="div">
-            PDF Accessibility Remediation
-          </Typography>
+          <img
+            src={logo}
+            alt="PDF Accessibility Logo"
+            style={{ height: '40px', width: 'auto' }}
+          />
+
         </Box>
 
         {/* Right Side: Usage Count and Home Button */}

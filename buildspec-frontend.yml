@@ -1,0 +1,275 @@
+version: 0.2
+env:
+  variables:
+    NODE_VERSION: "18"
+    # These environment variables are passed in from CodeBuild project configuration:
+    # AWS_ACCOUNT: Account ID for deployment
+    # AWS_REGION: Target AWS region
+    # PROJECT_NAME: Project identifier for resource naming
+    # AMPLIFY_URL: URL of the deployed Amplify application
+    # AMPLIFY_APP_ID: Amplify application ID
+    # USER_POOL_ID: Cognito User Pool ID
+    # USER_POOL_CLIENT_ID: Cognito User Pool Client ID
+    # USER_POOL_DOMAIN: Cognito User Pool Domain
+    # IDENTITY_POOL_ID: Cognito Identity Pool ID
+    # PDF_TO_PDF_BUCKET_ARN: Name of the PDF processing bucket (variable name says ARN but contains bucket name)
+    # PDF_TO_HTML_BUCKET_ARN: Name of the HTML conversion bucket (variable name says ARN but contains bucket name)
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: $NODE_VERSION
+    commands:
+      - echo "🚀 Installing dependencies for frontend deployment"
+      # Install native jq binary instead of npm version
+      - yum install -y jq
+      - aws --version
+      - echo "📦 Node version $(node --version)"
+      - echo "📦 NPM version $(npm --version)"
+      - echo "📦 JQ version $(jq --version)"
+      
+  pre_build:
+    commands:
+      - echo "🏗️ Setting up frontend environment..."
+      # Verify required environment variables
+      - |
+        if [ -z "$AWS_ACCOUNT" ] || [ -z "$AWS_REGION" ] || [ -z "$PROJECT_NAME" ]; then
+          echo "❌ Missing required environment variables"
+          echo "AWS_ACCOUNT: $AWS_ACCOUNT"
+          echo "AWS_REGION: $AWS_REGION"
+          echo "PROJECT_NAME: $PROJECT_NAME"
+          exit 1
+        fi
+      # Verify frontend-specific environment variables
+      - |
+        if [ -z "$AMPLIFY_URL" ] || [ -z "$AMPLIFY_APP_ID" ]; then
+          echo "❌ Missing required Amplify environment variables"
+          echo "AMPLIFY_URL: $AMPLIFY_URL"
+          echo "AMPLIFY_APP_ID: $AMPLIFY_APP_ID"
+          exit 1
+        fi
+      # Verify Cognito environment variables
+      - |
+        if [ -z "$USER_POOL_ID" ] || [ -z "$USER_POOL_CLIENT_ID" ] || [ -z "$USER_POOL_DOMAIN" ] || [ -z "$IDENTITY_POOL_ID" ]; then
+          echo "❌ Missing required Cognito environment variables"
+          echo "USER_POOL_ID: $USER_POOL_ID"
+          echo "USER_POOL_CLIENT_ID: $USER_POOL_CLIENT_ID"
+          echo "USER_POOL_DOMAIN: $USER_POOL_DOMAIN"
+          echo "IDENTITY_POOL_ID: $IDENTITY_POOL_ID"
+          exit 1
+        fi
+      # Verify S3 bucket environment variables
+      - |
+        if [ -z "$PDF_TO_PDF_BUCKET_ARN" ] || [ -z "$PDF_TO_HTML_BUCKET_ARN" ]; then
+          echo "❌ Missing required S3 bucket environment variables"
+          echo "PDF_TO_PDF_BUCKET_ARN: $PDF_TO_PDF_BUCKET_ARN"
+          echo "PDF_TO_HTML_BUCKET_ARN: $PDF_TO_HTML_BUCKET_ARN"
+          exit 1
+        fi
+      - echo "📋 Environment configuration:"
+      - echo "Account:$AWS_ACCOUNT, Region:$AWS_REGION, Project:$PROJECT_NAME"
+      - echo "Amplify:$AMPLIFY_APP_ID"
+      
+      # Update S3 CORS policies to include Amplify URL
+      - echo "🔧 Updating S3 CORS policies..."
+      - |
+        # Function to update CORS policy for a bucket
+        update_cors_policy() {
+          local bucket_name="$1"
+          echo "  📝 Processing CORS for bucket: $bucket_name"
+          
+          # Check if bucket exists
+          if ! aws s3api head-bucket --bucket "$bucket_name" 2>/dev/null; then
+            echo "  ❌ Bucket $bucket_name does not exist or is not accessible"
+            return 1
+          fi
+          
+          # Get current CORS configuration
+          echo "  📥 Getting current CORS configuration..."
+          if aws s3api get-bucket-cors --bucket "$bucket_name" --output json > current_cors.json 2>/dev/null; then
+            echo "  ✅ Current CORS policy retrieved"
+            cat current_cors.json
+          else
+            echo "  ⚠️  No existing CORS policy found, creating new one"
+            cat > current_cors.json << 'EOF'
+        {
+          "CORSRules": [
+            {
+              "AllowedHeaders": ["*"],
+              "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+              "AllowedOrigins": ["http://localhost:3000"],
+              "ExposeHeaders": ["ETag"],
+              "MaxAgeSeconds": 3000
+            }
+          ]
+        }
+        EOF
+          fi
+          
+          # Update CORS policy to include Amplify URL if not already present
+          echo "  🔄 Updating CORS policy to include Amplify URL..."
+          jq --arg amplify_url "$AMPLIFY_URL" '
+            .CORSRules[0].AllowedOrigins |= 
+            if . | index($amplify_url) then 
+              . 
+            else 
+              . + [$amplify_url] 
+            end
+          ' current_cors.json > updated_cors.json
+          
+          echo "  📋 Updated CORS policy:"
+          cat updated_cors.json
+          
+          # Apply updated CORS policy
+          echo "  🚀 Applying updated CORS policy..."
+          if aws s3api put-bucket-cors --bucket "$bucket_name" --cors-configuration file://updated_cors.json; then
+            echo "  ✅ CORS policy updated successfully for $bucket_name"
+          else
+            echo "  ❌ Failed to update CORS policy for $bucket_name"
+            return 1
+          fi
+          
+          # Verify the update
+          echo "  🔍 Verifying CORS update..."
+          if aws s3api get-bucket-cors --bucket "$bucket_name" --query 'CORSRules[0].AllowedOrigins' --output json | grep -q "$AMPLIFY_URL"; then
+            echo "  ✅ CORS verification successful - Amplify URL found in AllowedOrigins"
+          else
+            echo "  ⚠️  CORS verification warning - Amplify URL may not be properly set"
+          fi
+          
+          # Clean up temporary files
+          rm -f current_cors.json updated_cors.json
+          return 0
+        }
+        
+        # Update CORS for PDF processing bucket
+        echo "🎯 Updating CORS for PDF processing bucket..."
+        if ! update_cors_policy "$PDF_TO_PDF_BUCKET_ARN"; then
+          echo "❌ Failed to update CORS for PDF processing bucket: $PDF_TO_PDF_BUCKET_ARN"
+          exit 1
+        fi
+        
+        # Update CORS for HTML conversion bucket
+        echo "🎯 Updating CORS for HTML conversion bucket..."
+        if ! update_cors_policy "$PDF_TO_HTML_BUCKET_ARN"; then
+          echo "❌ Failed to update CORS for HTML conversion bucket: $PDF_TO_HTML_BUCKET_ARN"
+          exit 1
+        fi
+        
+        echo "✅ S3 CORS policies updated successfully"
+      - echo "📁 Changing to frontend directory..."
+      - cd frontend
+      - echo "📝 Creating frontend configuration (.env file)..."
+      # Create .env file with backend configuration
+      - |
+        cat > .env << EOF
+        # AWS Configuration
+        REACT_APP_AWS_ACCESS_KEY_ID=
+        REACT_APP_AWS_SECRET_ACCESS_KEY=
+        REACT_APP_AWS_REGION=$AWS_REGION
+
+        # Cognito Identity Pool (for anonymous access)
+        REACT_APP_COGNITO_IDENTITY_POOL_ID=$IDENTITY_POOL_ID
+
+        # ===== AUTHENTICATION CONFIGURATION (Required for Login) =====
+        # Cognito User Pool Configuration
+        REACT_APP_USER_POOL_CLIENT_ID=$USER_POOL_CLIENT_ID
+        REACT_APP_USER_POOL_ID=$USER_POOL_ID
+        REACT_APP_AUTHORITY=cognito-idp.$AWS_REGION.amazonaws.com
+
+        # Hosted UI Configuration
+        REACT_APP_DOMAIN_PREFIX=$USER_POOL_DOMAIN
+        REACT_APP_HOSTED_UI_URL=$AMPLIFY_URL
+
+        # S3 buckets
+        REACT_APP_PDF_TO_PDF_BUCKET_ARN=$PDF_TO_PDF_BUCKET_ARN
+        REACT_APP_PDF_TO_HTML_BUCKET_ARN=$PDF_TO_HTML_BUCKET_ARN
+
+        # Maintenance Mode
+        REACT_APP_MAINTENANCE_MODE=false
+        EOF
+
+      - echo "📦 S3 Bucket Configuration:"
+      - echo "Bucket Names:"
+      - echo "$PDF_TO_PDF_BUCKET_ARN"
+      - echo "$PDF_TO_HTML_BUCKET_ARN"
+      - echo "✅ Frontend configuration created"
+      - echo "📦 Installing frontend dependencies..."
+      - npm install
+      - echo "✅ Frontend dependencies installed"
+      
+  build:
+    commands:
+      - echo "🏗️ Building React application..."
+      - pwd
+      - npm run build
+      # Verify build completed successfully
+      - |
+        if [ ! -f "build/index.html" ]; then
+          echo "❌ Frontend build failed - index.html not found"
+          exit 1
+        fi
+      - echo "✅ React build completed successfully"
+      - echo "📦 Creating deployment package..."
+      - cd build
+      - zip -r ../frontend-build.zip .
+      - cd ..
+      - echo "✅ Deployment package created"
+      
+  post_build:
+    commands:
+      - echo "🚀 Deploying frontend to Amplify..."
+      # Create deployment using the target branch
+      - |
+        DEPLOYMENT_RESULT=$(aws amplify create-deployment \
+          --app-id "$AMPLIFY_APP_ID" \
+          --branch-name main \
+          --output json)
+        
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to create Amplify deployment"
+          exit 1
+        fi
+      - ZIP_UPLOAD_URL=$(echo "$DEPLOYMENT_RESULT" | jq -r '.zipUploadUrl')
+      - JOB_ID=$(echo "$DEPLOYMENT_RESULT" | jq -r '.jobId')
+      - echo "🎯 Job ID:$JOB_ID"
+      # Upload frontend package
+      - echo "📤 Uploading frontend build..."
+      - |
+        curl -T frontend-build.zip "$ZIP_UPLOAD_URL"
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to upload frontend package"
+          exit 1
+        fi
+      # Start deployment
+      - echo "🚀 Starting Amplify frontend deployment..."
+      - |
+        aws amplify start-deployment \
+          --app-id "$AMPLIFY_APP_ID" \
+          --branch-name main \
+          --job-id "$JOB_ID"
+        
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to start Amplify deployment"
+          exit 1
+        fi
+      # Monitor deployment
+      - echo "⏳ Monitoring frontend deployment..."
+      - |
+        for i in {1..20}; do
+          STATUS=$(aws amplify get-job --app-id $AMPLIFY_APP_ID --branch-name main --job-id $JOB_ID --query 'job.summary.status' --output text)
+
+          if [ "$STATUS" = "SUCCEED" ]; then
+            echo "✅ Frontend deployment completed successfully!"
+            break
+          elif [ "$STATUS" = "FAILED" ]; then
+            echo "❌ Frontend deployment failed!"
+            aws amplify get-job --app-id $AMPLIFY_APP_ID --job-id $JOB_ID --query 'job.summary.result'
+            exit 1
+          else
+            echo "  Status: $STATUS (attempt $i/20)"
+            sleep 30
+          fi
+        done
+      - echo "✅ Frontend deployment monitoring completed!"
+      - echo "📤 Frontend successfully deployed to Amplify"

@@ -61,10 +61,7 @@ function FirstSignInDialog() {
 
   // Check if form is valid (i.e., required fields are non-empty)
   const formIsValid = Boolean(
-    organization.trim() &&
-    selectedCountry &&
-    selectedState &&
-    selectedCity
+    organization.trim()
   );
 
   const handleSubmit = async () => {
@@ -79,9 +76,9 @@ function FirstSignInDialog() {
       const bodyData = {
         sub: userSub,
         organization,
-        country: selectedCountry.isoCode,
-        state: selectedState.isoCode,
-        city: selectedCity.name,
+        country: selectedCountry ? selectedCountry.isoCode : 'N/A',
+        state: selectedState ? selectedState.isoCode : 'N/A',
+        city: selectedCity ? selectedCity.name : 'N/A',
       };
 
       const response = await fetch(FirstSignInAPI, {
@@ -158,7 +155,6 @@ function FirstSignInDialog() {
                 {...params}
                 label="Country"
                 variant="outlined"
-                required
               />
             )}
           />
@@ -181,7 +177,6 @@ function FirstSignInDialog() {
                 {...params}
                 label="State"
                 variant="outlined"
-                required
               />
             )}
             disabled={!selectedCountry}
@@ -202,7 +197,6 @@ function FirstSignInDialog() {
                 {...params}
                 label="City"
                 variant="outlined"
-                required
               />
             )}
             disabled={!selectedState}

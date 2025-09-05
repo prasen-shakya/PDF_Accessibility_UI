@@ -1,0 +1,74 @@
+version: 0.2
+env:
+  variables:
+    NODE_VERSION: "18"
+    # These environment variables are passed in from CodeBuild project configuration:
+    # AWS_ACCOUNT: Account ID for deployment
+    # AWS_REGION: Target AWS region
+    # PROJECT_NAME: Project identifier for resource naming
+    # AMPLIFY_URL: URL of the deployed Amplify application
+    # AMPLIFY_APP_ID: Amplify application ID
+    # PDF_TO_PDF_BUCKET_ARN: ARN of the PDF processing bucket
+    # PDF_TO_HTML_BUCKET_ARN: ARN of the HTML conversion bucket
+phases:
+  install:
+    runtime-versions:
+      nodejs: $NODE_VERSION
+    commands:
+      - echo "🚀 Installing dependencies for backend deployment"
+      - npm install -g aws-cdk
+      - aws --version
+      - echo "📦 CDK version $(cdk --version)"
+  pre_build:
+    commands:
+      - echo "🏗️ Setting up CDK environment for backend deployment..."
+      # Verify required environment variables
+      - |
+        if [ -z "$AWS_ACCOUNT" ] || [ -z "$AWS_REGION" ] || [ -z "$PROJECT_NAME" ]; then
+          echo "❌ Missing required environment variables"
+          echo "AWS_ACCOUNT: $AWS_ACCOUNT"
+          echo "AWS_REGION: $AWS_REGION"
+          echo "PROJECT_NAME: $PROJECT_NAME"
+          exit 1
+        fi
+      # Verify backend-specific environment variables
+      - |
+        if [ -z "$AMPLIFY_URL" ] || [ -z "$AMPLIFY_APP_ID" ] || [ -z "$PDF_TO_PDF_BUCKET_ARN" ] || [ -z "$PDF_TO_HTML_BUCKET_ARN" ]; then
+          echo "❌ Missing required backend environment variables"
+          echo "AMPLIFY_URL: $AMPLIFY_URL"
+          echo "AMPLIFY_APP_ID: $AMPLIFY_APP_ID"
+          echo "PDF_TO_PDF_BUCKET_ARN: $PDF_TO_PDF_BUCKET_ARN"
+          echo "PDF_TO_HTML_BUCKET_ARN: $PDF_TO_HTML_BUCKET_ARN"
+          exit 1
+        fi
+      # Create .env file for backend deployment
+      - echo "AWS_ACCOUNT=$AWS_ACCOUNT" > .env
+      - echo "AWS_REGION=$AWS_REGION" >> .env
+      - echo "AMPLIFY_URL=$AMPLIFY_URL" >> .env
+      - echo "AMPLIFY_APP_ID=$AMPLIFY_APP_ID" >> .env
+      - echo "PDF_TO_PDF_BUCKET_ARN=$PDF_TO_PDF_BUCKET_ARN" >> .env
+      - echo "PDF_TO_HTML_BUCKET_ARN=$PDF_TO_HTML_BUCKET_ARN" >> .env
+      - echo "📋 Environment configuration:"
+      - echo "Account:$AWS_ACCOUNT, Region:$AWS_REGION, Project:$PROJECT_NAME"
+      - echo "📁 Changing to CDK directory..."
+      - cd cdk_backend
+      - echo "📦 Installing CDK dependencies..."
+      - npm install
+      - echo "🔄 Bootstrapping CDK environment..."
+      - cdk bootstrap
+      - echo "✅ CDK bootstrap completed"
+  build:
+    commands:
+      - echo "📁 Already in backend directory..."
+      - pwd
+      - echo "🔧 Deploying backend infrastructure..."
+      - cdk deploy --context deploy=backend --require-approval never
+      - echo "✅ Backend infrastructure deployed"
+      - echo "📝 Verifying stack outputs..."
+      # Use the correct stack name pattern for backend stack
+      - aws cloudformation describe-stacks --stack-name "${PROJECT_NAME}-CdkBackendStack" --query 'Stacks[0].Outputs'
+  post_build:
+    commands:
+      - echo "✅ Backend CDK deployment completed!"
+      - echo "📤 Outputs available via CloudFormation stacks"
+      # Export key outputs for potential use by subsequent builds

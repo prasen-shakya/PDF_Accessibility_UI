@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from 'react-oidc-context'; // to get user sub if needed
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { Box, Typography, TextField, Tooltip, IconButton, Snackbar, Alert } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
+import { Snackbar, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
-import { CircularProgress } from '@mui/material';
-import { InfoOutlined } from '@mui/icons-material';
 import { PDFDocument } from 'pdf-lib';
+import imgFileQuestion from '../assets/pdf-question.svg';
+import imgFileText from '../assets/pdf-icon.svg';
+import imgCodeXml from '../assets/pdf-html.svg';
+import './UploadSection.css';
 
-import { region, Bucket, CheckAndIncrementQuota } from '../utilities/constants';
+import { region, PDFBucket, HTMLBucket, CheckAndIncrementQuota, validateBucketConfiguration, validateFormatBucket } from '../utilities/constants';
 
 function sanitizeFilename(filename) {
   // Normalize the filename to decompose accented characters
@@ -23,18 +24,77 @@ function sanitizeFilename(filename) {
 }
 
 
-function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFilesAllowed, maxPagesAllowed, maxSizeAllowedMB, onUsageRefresh, setUsageCount, isFileUploaded}) {
+function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFilesAllowed, maxPagesAllowed, maxSizeAllowedMB, onUsageRefresh, setUsageCount, isFileUploaded, onShowDeploymentPopup}) {
   const auth = useAuth();
   const fileInputRef = useRef(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFormat, setSelectedFormat] = useState(null);
+  const [fileSizeMB, setFileSizeMB] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [formatAvailability, setFormatAvailability] = useState({ pdf: false, html: false });
+
+  // Check format availability on component mount
+  React.useEffect(() => {
+    const pdfValidation = validateFormatBucket('pdf');
+    const htmlValidation = validateFormatBucket('html');
+
+    setFormatAvailability({
+      pdf: pdfValidation.isConfigured,
+      html: htmlValidation.isConfigured
+    });
+  }, []);
+
+  const resetFileInput = () => {
+    setSelectedFile(null);
+    setSelectedFormat(null);
+    setFileSizeMB(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
+  };
+
+  const handleFormatSelect = (format) => {
+    // Check bucket configuration for the specific format
+    const formatValidation = validateFormatBucket(format);
+    const fullValidation = validateBucketConfiguration();
+
+    // If both buckets are missing, show deployment popup
+    if (fullValidation.needsFullDeployment) {
+      setErrorMessage('Backend infrastructure not deployed. Please deploy the backend first.');
+      setOpenSnackbar(true);
+
+      if (onShowDeploymentPopup) {
+        onShowDeploymentPopup(fullValidation);
+      }
+      return;
+    }
+
+    // If specific format bucket is missing, show deployment guidance but don't proceed
+    if (formatValidation.needsDeployment) {
+      // Show deployment popup with specific format guidance
+      if (onShowDeploymentPopup) {
+        const formatSpecificValidation = {
+          ...fullValidation,
+          needsFullDeployment: false,
+          specificFormat: format,
+          specificBucket: formatValidation.bucketType
+        };
+        onShowDeploymentPopup(formatSpecificValidation);
+      }
+      return;
+    }
+
+    setSelectedFormat(format);
+    setErrorMessage('');
+  };
 
   const handleFileInput = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
 
     // Reset any existing error messages
     setErrorMessage('');
@@ -68,31 +128,56 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       }
 
       setSelectedFile(file);
+      console.log('File object details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      const sizeInBytes = file.size || 0;
+      const sizeInMB = sizeInBytes / (1024 * 1024);
+      const displaySize = sizeInMB >= 0.1 ? parseFloat(sizeInMB.toFixed(1)) : parseFloat(sizeInMB.toFixed(2));
+      setFileSizeMB(displaySize);
+      console.log('File size set to:', sizeInMB, 'MB for file:', file.name, '(raw size:', file.size, 'bytes)');
+      // Pass the file directly to handleUpload
+      handleUpload(file);
+
     } catch (error) {
-      console.error('Error reading PDF file:', error);
       setErrorMessage('Unable to read the PDF file.');
       setOpenSnackbar(true);
       resetFileInput();
     }
   };
 
-  const resetFileInput = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = null;
-    }
+  const handleFileSelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf';
+    input.onchange = (e) => {
+      handleFileInput(e);
+    };
+    input.click();
   };
 
-  const handleUpload = async () => {
-    // **1. Check if user has reached the upload limit**
+  const handleUpload = async (file = selectedFile) => {
+
+    // **1. Check if the bucket for selected format is configured**
+    const formatValidation = validateFormatBucket(selectedFormat);
+    if (formatValidation.needsDeployment) {
+      setErrorMessage(`${formatValidation.bucketType} not configured. Please install the required infrastructure first.`);
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // **2. Check if user has reached the upload limit**
     if (currentUsage >= maxFilesAllowed) {
       setErrorMessage('You have reached your upload limit. Please contact support for further assistance.');
       setOpenSnackbar(true);
       return;
     }
 
-    // **2. Basic Guards**
-    if (!selectedFile) {
+    // **3. Basic Guards**
+    if (!file) {
       setErrorMessage('Please select a PDF file before uploading.');
       setOpenSnackbar(true);
       return;
@@ -157,29 +242,34 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, ''); // YYYYMMDDTHHMMSS format
       const userEmail = auth.user?.profile?.email || 'user'; // Use email for unique filename, fallback to 'user'
       const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumerics with underscores
-      const sanitizedFileName = sanitizeFilename(selectedFile.name) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails 
+      const sanitizedFileName = sanitizeFilename(file.name) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
-      // const uniqueFilename = `${sanitizedEmail}_${timestamp}_${selectedFile.name}`; // Sanitized and unique filename
+
+      // Select bucket and directory based on format
+      const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
+      const keyPrefix = selectedFormat === 'html' ? 'uploads/' : 'pdf/';
+
 
       const params = {
-        Bucket,
-        Key: `pdf/${uniqueFilename}`,
-        Body: selectedFile,
+        Bucket: selectedBucket,
+        Key: `${keyPrefix}${uniqueFilename}`,
+        Body: file,
       };
 
       const command = new PutObjectCommand(params);
       await client.send(command);
 
-      // **6. Notify Parent of Completion**
-      onUploadComplete(uniqueFilename,sanitizedFileName);
+      console.log('Upload complete, new file name:', uniqueFilename);
+
+      // **6. Notify Parent of Completion with format**
+      onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf');
 
       // **7. Refresh Usage**
       if (onUsageRefresh) {
         onUsageRefresh();
       }
 
-      // **8. Reset File Input**
-      resetFileInput();
+      // **8. Don't reset automatically - let parent component handle flow**
     } catch (error) {
       console.error('Error uploading file:', error);
       setErrorMessage('Error uploading file. Please try again.');
@@ -193,18 +283,142 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
     if (reason === 'clickaway') return;
     setOpenSnackbar(false);
   };
-  const FILENAME_THRESHOLD = 40; // Set the filename character limit
 
-  // Function to truncate the filename if it exceeds the threshold
-  const truncateFilename = (filename) => {
-    if (filename.length > FILENAME_THRESHOLD) {
-      const extensionIndex = filename.lastIndexOf('.');
-      const extension = filename.substring(extensionIndex);
-      const truncatedName = filename.substring(0, FILENAME_THRESHOLD - extension.length) + '...';
-      return truncatedName + extension;
+
+  if (selectedFormat === 'pdf' || selectedFormat === 'html') {
+    const formatTitle = selectedFormat === 'pdf' ? 'PDF to PDF' : 'PDF to HTML';
+    const formatIcon = selectedFormat === 'pdf' ? imgFileText : imgCodeXml;
+
+    if (selectedFile) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="upload-container-selected">
+            <div className="upload-content">
+              <div className="upload-header">
+                <div className="file-icon">
+                  <img src={formatIcon} alt="" />
+                </div>
+                <div className="upload-title">
+                  <h2>{formatTitle}</h2>
+                </div>
+              </div>
+
+              <div className="upload-progress">
+                <div className="file-info">
+                  <span className="file-name">{selectedFile.name} • {fileSizeMB > 0 ? fileSizeMB : (selectedFile?.size ? (() => {
+                    const size = selectedFile.size / (1024 * 1024);
+                    return size >= 0.1 ? size.toFixed(1) : size.toFixed(2);
+                  })() : '0.0')} MB</span>
+                  <span className="progress-percent">{isUploading ? 'Uploading...' : 'Ready'}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: isUploading ? '50%' : '100%' }}></div>
+                </div>
+              </div>
+
+              {errorMessage && (
+                <div className="upload-error">
+                  <p>Upload failed: {errorMessage}</p>
+                </div>
+              )}
+
+              <div className="upload-buttons">
+                <button
+                  className="change-file-btn"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setErrorMessage('');
+                    setIsUploading(false);
+                  }}
+                  disabled={isUploading}
+                >
+                  Choose New PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="disclaimer">
+              <p>This solution does not remediate for fillable forms and color selection/ contrast for people with color blindness</p>
+            </div>
+          </div>
+
+          {/* Snackbar for error messages */}
+          <Snackbar
+            open={openSnackbar}
+            autoHideDuration={6000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          >
+            <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }} elevation={6} variant="filled">
+              {errorMessage}
+            </Alert>
+          </Snackbar>
+        </motion.div>
+      );
     }
-    return filename;
-  };
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="upload-container-selected">
+          <div className="upload-content">
+            <div className="upload-header">
+              <div className="file-icon">
+                <img src={formatIcon} alt="" />
+              </div>
+              <div className="upload-title">
+                <h2>{formatTitle}</h2>
+              </div>
+            </div>
+
+            <div className="upload-instructions">
+              <p className="upload-main-text">Drop your PDF here or click to browse</p>
+              <p className="upload-sub-text">Maximum file size: {maxSizeAllowedMB}MB • Maximum pages: {maxPagesAllowed}</p>
+            </div>
+
+            {errorMessage && (
+              <div className="upload-error">
+                <p>{errorMessage}</p>
+              </div>
+            )}
+
+            <div className="upload-buttons">
+              <button className="change-format-btn" onClick={() => setSelectedFormat(null)}>
+                Change Output Format
+              </button>
+              <button className="upload-btn" onClick={handleFileSelect} disabled={isUploading}>
+                {isUploading ? 'Uploading...' : 'Upload PDF'}
+              </button>
+            </div>
+          </div>
+
+          <div className="disclaimer">
+            <p>This solution does not remediate for fillable forms and color selection/ contrast for people with color blindness</p>
+          </div>
+        </div>
+
+        {/* Snackbar for error messages */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }} elevation={6} variant="filled">
+            {errorMessage}
+          </Alert>
+        </Snackbar>
+      </motion.div>
+    );
+  }
+
   
   return (
     <motion.div
@@ -212,67 +426,61 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <Box
-        sx={{
-          textAlign: 'center',
-          padding: '2rem',
-          border: '1px solid #ddd',
-          borderRadius: '12px',
-          backgroundColor: '#f9f9f9',
-          boxShadow: '0 8px 15px rgba(0, 0, 0, 0.1)',
-          maxWidth: '400px',
-          margin: '0 auto',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-          <Typography variant="h5" sx={{ color: '#333' }}>
-            Upload Your PDF
-          </Typography>
-          <Tooltip title="See Document Requirements in left navigation" placement="right">
-            <IconButton aria-label="Document Requirements Info">
-              <InfoOutlined />
-            </IconButton>
-          </Tooltip>
-        </Box>
-  
-        <TextField
-          type="file"
-          accept=".pdf"
-          onChange={handleFileInput}
-          inputRef={fileInputRef}
-          disabled={isFileUploaded}
-          inputProps={{ style: { display: 'block', margin: '1rem auto' }, 'aria-label': 'PDF File Upload Input' }}
-          sx={{ marginTop: '1rem' }}
-        />
-  
-        <LoadingButton
-          variant="contained"
-          color="primary"
-          loading={isUploading}
-          onClick={handleUpload}
-          disabled={isUploading || !selectedFile}
-          sx={{
-            marginTop: '1rem',
-            backgroundColor: '#1976d2',
-            color: '#fff',
-            padding: '0.6rem 1.2rem',
-            transition: 'transform 0.3s',
-            '&:hover': {
-              backgroundColor: '#125b9d',
-              transform: 'scale(1.05)',
-            },
-          }}
-          loadingIndicator={<CircularProgress size={20} sx={{ color: 'white' }} />}
-          aria-label="Upload PDF Button"
-        >
-          {isUploading
-            ? 'Uploading...'
-            : selectedFile
-            ? `Upload ${truncateFilename(selectedFile.name)}`
-            : 'Please Upload A PDF'}
-        </LoadingButton>
-      </Box>
-  
+      <div className="upload-container">
+        <div className="upload-content">
+          <div className="upload-header">
+            <div className="file-icon">
+              <img src={imgFileQuestion} alt="" />
+            </div>
+            <div className="upload-title">
+              <h2>Choose Output Format</h2>
+            </div>
+          </div>
+
+          <div className="format-options">
+            <div
+              className={`format-option ${selectedFormat === 'pdf' ? 'selected' : ''}`}
+              onClick={() => handleFormatSelect('pdf')}
+            >
+              <div className="format-header">
+                <div className="format-icon">
+                  <img src={imgFileText} alt="" />
+                </div>
+                <div className="format-info">
+                  <span className="format-name">PDF to PDF</span>
+                  <span className={`format-status ${formatAvailability.pdf ? 'available' : 'unavailable'}`}>
+                    {formatAvailability.pdf ? '✓ Available' : '⚠ Install Required'}
+                  </span>
+                </div>
+              </div>
+              <p className="format-description">
+                Improve accessibility and maintain document structure
+              </p>
+            </div>
+
+            <div
+              className={`format-option ${selectedFormat === 'html' ? 'selected' : ''}`}
+              onClick={() => handleFormatSelect('html')}
+            >
+              <div className="format-header">
+                <div className="format-icon">
+                  <img src={imgCodeXml} alt="" />
+                </div>
+                <div className="format-info">
+                  <span className="format-name">PDF to HTML</span>
+                  <span className={`format-status ${formatAvailability.html ? 'available' : 'unavailable'}`}>
+                    {formatAvailability.html ? '✓ Available' : '⚠ Install Required'}
+                  </span>
+                </div>
+              </div>
+              <p className="format-description">
+                Convert document to accessible HTML version
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Snackbar for error messages */}
       <Snackbar
         open={openSnackbar}

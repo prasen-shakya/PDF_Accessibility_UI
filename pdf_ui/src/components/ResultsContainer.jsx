@@ -103,7 +103,12 @@ const ResultsContainer = ({
     <>
       <div className="results-container">
         <div className="results-content">
-          <h2>PDF Remediation Successful</h2>
+          <div className="results-header">
+            <h2>PDF Remediation Successful</h2>
+            <div className="flow-indicator">
+              {format === 'html' ? 'PDF → HTML' : 'PDF → PDF'}
+            </div>
+          </div>
 
           <div className="processing-info">
             <div className="processing-time">

@@ -8,17 +8,17 @@ const InformationBlurb = () => {
     {
       icon: imgDollar,
       title: "Cost Effective Options",
-      description: "Reduce costs to less than a penny per page"
+      description: "Cost reduction from traditional remediation methods"
     },
     {
       icon: imgCheckmark,
       title: "WCAG 2.1 Level AA Standard",
-      description: "Meets international accessibility standards"
+      description: "Supports international accessibility standards"
     },
     {
       icon: imgZap,
       title: "Fast Processing",
-      description: "Get automated PDF remediation in minutes"
+      description: "Automated PDF remediation in minutes"
     }
   ];
 
@@ -37,7 +37,8 @@ const InformationBlurb = () => {
     flexDirection: 'column',
     alignItems: 'center',
     borderTop: '2px solid #8c1d40',
-    position: 'relative'
+    position: 'relative',
+    minHeight: '140px'
   };
 
   const iconContainerStyle = {

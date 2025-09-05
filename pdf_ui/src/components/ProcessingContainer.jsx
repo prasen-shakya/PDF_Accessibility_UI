@@ -3,7 +3,6 @@ import { S3Client, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ResultsContainer from './ResultsContainer';
 import './ProcessingContainer.css';
-import img from "../assets/pdf-icon.svg";
 import { PDFBucket, HTMLBucket, region } from '../utilities/constants';
 
 const ProcessingContainer = ({
@@ -18,7 +17,6 @@ const ProcessingContainer = ({
   const [isFileReady, setIsFileReady] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pollingAttempts, setPollingAttempts] = useState(0);
 
   const processingSteps = [
@@ -200,10 +198,12 @@ const ProcessingContainer = ({
     <div className="processing-container">
       <div className="processing-content">
         <div className="processing-header">
-          <div className="file-clock-icon">
-            <img alt="" className="block max-w-none size-full" src={img} />
+          <div className="header-content">
+            <h2>{isFileReady ? `File Ready: ${truncateFilename(originalFileName)}` : `Processing: ${truncateFilename(originalFileName)}`}</h2>
+            <div className="flow-indicator">
+              {selectedFormat === 'html' ? 'PDF → HTML' : 'PDF → PDF'}
+            </div>
           </div>
-          <h2>{isFileReady ? `File Ready: ${truncateFilename(originalFileName)}` : `Processing: ${truncateFilename(originalFileName)}`}</h2>
         </div>
 
         <div className="processing-info">
@@ -244,43 +244,6 @@ const ProcessingContainer = ({
           />
         )}
 
-        <div className="upload-new-section">
-          <button className="upload-new-btn" onClick={() => setShowConfirmDialog(true)}>
-            Upload a New PDF
-          </button>
-        </div>
-
-        {/* Custom Confirmation Dialog */}
-        {showConfirmDialog && (
-          <div className="confirm-overlay" onClick={() => setShowConfirmDialog(false)}>
-            <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-              <div className="confirm-header">
-                <h3>Confirm New Upload</h3>
-              </div>
-              <div className="confirm-body">
-                <p>Are you sure you want to upload a new PDF?</p>
-                <p className="confirm-warning">This will discard the current PDF and start a new session.</p>
-              </div>
-              <div className="confirm-actions">
-                <button
-                  className="confirm-btn cancel-btn"
-                  onClick={() => setShowConfirmDialog(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="confirm-btn confirm-btn-primary"
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    onNewUpload();
-                  }}
-                >
-                  Yes, Upload New PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
     </div>

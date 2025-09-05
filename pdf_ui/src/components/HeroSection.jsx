@@ -35,13 +35,14 @@ const HeroSection = () => {
     lineHeight: '30px',
     color: '#1e293b',
     margin: '0',
-    width: '480px'
+    maxWidth: '480px',
+    width: '100%'
   };
 
   return (
     <div style={heroSectionStyle}>
       <div style={heroContentStyle}>
-        <h1 style={heroTitleStyle}>Transform Your PDF for Everyone</h1>
+        <h1 style={heroTitleStyle}>PDF Remediation</h1>
         <p style={heroDescriptionStyle}>
           Artificial intelligence-powered open-source solution designed to
           improve digital accessibility for everyone.

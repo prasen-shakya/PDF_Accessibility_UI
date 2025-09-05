@@ -8,6 +8,7 @@ import Header from './components/Header';
 import UploadSection from './components/UploadSection';
 import ProcessingContainer from './components/ProcessingContainer';
 import ResultsContainer from './components/ResultsContainer';
+import LeftNav from './components/LeftNav';
 import theme from './theme';
 import FirstSignInDialog from './components/FirstSignInDialog';
 import HeroSection from './components/HeroSection';
@@ -42,6 +43,10 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   // Deployment validation state
   const [showDeploymentPopup, setShowDeploymentPopup] = useState(false);
   const [bucketValidation, setBucketValidation] = useState(null);
+
+  // Left navigation state
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+
 
   // Fetch credentials once user is authenticated
   useEffect(() => {
@@ -211,7 +216,10 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ minHeight: '100vh', padding: 3, backgroundColor: '#f4f6f8' }}>
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
+        <LeftNav isCollapsed={isNavCollapsed} setIsCollapsed={setIsNavCollapsed} />
+
+        <Box sx={{ padding: 3, paddingLeft: { xs: 3, md: isNavCollapsed ? '90px' : '390px' }, transition: 'padding-left 0.3s ease' }}>
           <Header
             handleSignOut={() => auth.removeUser()}
             usageCount={usageCount}
@@ -219,7 +227,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
             usageError={usageError}
             loadingUsage={loadingUsage}
             maxFilesAllowed={maxFilesAllowed}
-          /> 
+          />
 
           <FirstSignInDialog />
 
@@ -287,6 +295,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
           <Box sx={{ marginTop: 8 }}>
             <InformationBlurb />
           </Box>
+        </Box>
       </Box>
     </ThemeProvider>
   );

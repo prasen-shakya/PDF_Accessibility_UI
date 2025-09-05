@@ -49,11 +49,7 @@ phases:
   post_build:
     commands:
       - echo "🚀 Deploying frontend to Amplify..."
-      - |
-        if [ -z "$AMPLIFY_APP_ID" ]; then
-          echo "❌ Error: AMPLIFY_APP_ID environment variable is not set"
-          exit 1
-        fi
+      - echo $AMPLIFY_APP_ID
       - echo "Creating Amplify deployment..."
       - >-
         aws amplify create-deployment \

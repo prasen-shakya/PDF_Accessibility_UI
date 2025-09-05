@@ -83,6 +83,10 @@ echo "✅ Found Amplify App URL: $REACT_APP_AMPLIFY_APP_URL"
 echo "✅ Found User Pool ID: $REACT_APP_USER_POOL_ID"
 echo "✅ Found User Pool Client ID: $REACT_APP_USER_POOL_CLIENT_ID"
 
+# Debug: Check AMPLIFY_APP_ID before adding to env vars
+echo "🔍 Debug: AMPLIFY_APP_ID = '$AMPLIFY_APP_ID'"
+echo "🔍 Debug: AMPLIFY_APP_ID length = ${#AMPLIFY_APP_ID}"
+
 # --------------------------------------------------
 # Create Frontend CodeBuild Project
 # --------------------------------------------------
@@ -136,7 +140,7 @@ add_frontend_env_var "REACT_APP_USER_POOL_CLIENT_ID" "$REACT_APP_USER_POOL_CLIEN
 add_frontend_env_var "REACT_APP_USER_POOL_DOMAIN" "$REACT_APP_USER_POOL_DOMAIN"
 add_frontend_env_var "REACT_APP_IDENTITY_POOL_ID" "$REACT_APP_IDENTITY_POOL_ID"
 add_frontend_env_var "REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT" "$REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT"
-add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$CHECK_UPLOAD_QUOTA_ENDPOINT"
+add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT"
 add_frontend_env_var "REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT" "$REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT"
 
 FRONTEND_ENVIRONMENT='{
@@ -145,6 +149,10 @@ FRONTEND_ENVIRONMENT='{
   "computeType": "BUILD_GENERAL1_MEDIUM",
   "environmentVariables": ['"$FRONTEND_ENV_VARS_ARRAY"']
 }'
+
+# Debug: Show the environment variables being passed
+echo "🔍 Debug: Environment variables JSON:"
+echo "$FRONTEND_ENVIRONMENT" | jq .
 
 # Frontend buildspec
 FRONTEND_SOURCE='{

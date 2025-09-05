@@ -32,7 +32,7 @@ phases:
       - >-
         export AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
           --stack-name $STACK_NAME \
-          --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
+          --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue | [0]' \
           --output text)
       - |
         if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then

@@ -56,6 +56,31 @@ export class CdkBackendStack extends cdk.Stack {
       stage: 'PRODUCTION'
     });
 
+    // Add redirect rules for SPA routing
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>',
+      target: '/index.html',
+      status: amplify.RedirectStatus.TEMPORARY_REDIRECT
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/home',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/callback',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/app',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
     const domainPrefix = `pdf-ui-auth${Math.random().toString(36).substring(2, 8)}`; // must be globally unique in that region
     const Default_Group = 'DefaultUsers';
     const Amazon_Group = 'AmazonUsers';

@@ -50,10 +50,89 @@ else
     --assume-role-policy-document "$TRUST_DOC" \
     --query 'Role.Arn' --output text)
 
-  echo "Attaching AdministratorAccess policy..."
-  aws iam attach-role-policy \
+  echo "Attaching custom deployment policy..."
+  CUSTOM_POLICY='{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AmplifyFullAccess",
+            "Effect": "Allow",
+            "Action": ["amplify:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CognitoFullAccess",
+            "Effect": "Allow",
+            "Action": ["cognito-idp:*", "cognito-identity:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "LambdaFullAccess",
+            "Effect": "Allow",
+            "Action": ["lambda:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "APIGatewayFullAccess",
+            "Effect": "Allow",
+            "Action": ["apigateway:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "IAMFullAccess",
+            "Effect": "Allow",
+            "Action": ["iam:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3FullAccess",
+            "Effect": "Allow",
+            "Action": ["s3:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecretsManagerFullAccess",
+            "Effect": "Allow",
+            "Action": ["secretsmanager:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudFormationFullAccess",
+            "Effect": "Allow",
+            "Action": ["cloudformation:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudTrailFullAccess",
+            "Effect": "Allow",
+            "Action": ["cloudtrail:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "EventsFullAccess",
+            "Effect": "Allow",
+            "Action": ["events:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudWatchLogsFullAccess",
+            "Effect": "Allow",
+            "Action": ["logs:*"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "STSAccess",
+            "Effect": "Allow",
+            "Action": ["sts:GetCallerIdentity", "sts:AssumeRole"],
+            "Resource": "*"
+        }
+    ]
+}'
+
+  aws iam put-role-policy \
     --role-name "$ROLE_NAME" \
-    --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+    --policy-name "DeploymentPolicy" \
+    --policy-document "$CUSTOM_POLICY"
 
   echo "✓ IAM role created"
   echo "Waiting for IAM role to propagate for 10 seconds..."

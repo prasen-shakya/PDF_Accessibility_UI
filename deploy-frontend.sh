@@ -53,6 +53,7 @@ echo "✅ Retrieved CDK outputs successfully"
 echo "Debug: Raw CDK outputs: $CDK_OUTPUTS"
 
 # Extract individual outputs
+AMPLIFY_APP_ID=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "AmplifyAppId") | .OutputValue')
 REACT_APP_AMPLIFY_APP_URL=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "AmplifyAppURL") | .OutputValue')
 REACT_APP_USER_POOL_ID=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "UserPoolId") | .OutputValue')
 REACT_APP_USER_POOL_CLIENT_ID=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "UserPoolClientId") | .OutputValue')
@@ -63,6 +64,13 @@ REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | selec
 REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "UpdateAttributesApiEndpoint377B5108") | .OutputValue')
 
 # Validate required outputs
+if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "null" ]; then
+  echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
+  echo "Available outputs:"
+  echo "$CDK_OUTPUTS" | jq .
+  exit 1
+fi
+
 if [ -z "$REACT_APP_AMPLIFY_APP_URL" ] || [ "$REACT_APP_AMPLIFY_APP_URL" = "null" ]; then
   echo "❌ Error: Could not find AmplifyAppURL in CDK stack outputs"
   echo "Available outputs:"
@@ -70,6 +78,7 @@ if [ -z "$REACT_APP_AMPLIFY_APP_URL" ] || [ "$REACT_APP_AMPLIFY_APP_URL" = "null
   exit 1
 fi
 
+echo "✅ Found Amplify App ID: $AMPLIFY_APP_ID"
 echo "✅ Found Amplify App URL: $REACT_APP_AMPLIFY_APP_URL"
 echo "✅ Found User Pool ID: $REACT_APP_USER_POOL_ID"
 echo "✅ Found User Pool Client ID: $REACT_APP_USER_POOL_CLIENT_ID"
@@ -120,13 +129,14 @@ add_frontend_env_var() {
   fi
 }
 
+add_frontend_env_var "AMPLIFY_APP_ID" "$AMPLIFY_APP_ID"
 add_frontend_env_var "REACT_APP_AMPLIFY_APP_URL" "$REACT_APP_AMPLIFY_APP_URL"
 add_frontend_env_var "REACT_APP_USER_POOL_ID" "$REACT_APP_USER_POOL_ID"
 add_frontend_env_var "REACT_APP_USER_POOL_CLIENT_ID" "$REACT_APP_USER_POOL_CLIENT_ID"
 add_frontend_env_var "REACT_APP_USER_POOL_DOMAIN" "$REACT_APP_USER_POOL_DOMAIN"
 add_frontend_env_var "REACT_APP_IDENTITY_POOL_ID" "$REACT_APP_IDENTITY_POOL_ID"
 add_frontend_env_var "REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT" "$REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT"
-add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT"
+add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$CHECK_UPLOAD_QUOTA_ENDPOINT"
 add_frontend_env_var "REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT" "$REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT"
 
 FRONTEND_ENVIRONMENT='{

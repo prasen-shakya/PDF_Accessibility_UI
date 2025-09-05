@@ -49,19 +49,9 @@ phases:
   post_build:
     commands:
       - echo "🚀 Deploying frontend to Amplify..."
-      - STACK_NAME="CdkBackendStack"
-      - echo "Extracting Amplify App ID from CloudFormation outputs..."
-      - >-
-        export AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
-          --stack-name $STACK_NAME \
-          --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue | [0]' \
-          --output text)
-      - echo $AMPLIFY_APP_ID
       - |
-        if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then
-          echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
-          echo "Available outputs:"
-          aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs'
+        if [ -z "$AMPLIFY_APP_ID" ]; then
+          echo "❌ Error: AMPLIFY_APP_ID environment variable is not set"
           exit 1
         fi
       - echo "Creating Amplify deployment..."

@@ -60,7 +60,7 @@ export class CdkBackendStack extends cdk.Stack {
     amplifyApp.addCustomRule(new amplify.CustomRule({
       source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>',
       target: '/index.html',
-      status: amplify.RedirectStatus.TEMPORARY_REDIRECT
+      status: amplify.RedirectStatus.REWRITE
     }));
 
     amplifyApp.addCustomRule(new amplify.CustomRule({

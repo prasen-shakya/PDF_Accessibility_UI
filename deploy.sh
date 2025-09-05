@@ -160,73 +160,9 @@ fi
 
 echo "✅ Backend build completed successfully!"
 
-# --------------------------------------------------
-# 5. Configure S3 Bucket Policies and CORS
-# --------------------------------------------------
-
-echo "🔧 Configuring S3 bucket policies and CORS..."
-
-configure_bucket() {
-  local bucket_name="$1"
-  echo "Configuring bucket: $bucket_name"
-  
-  # Set bucket policy
-  local bucket_policy='{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "PublicReadGetObject",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::'$bucket_name'/*"
-        }
-    ]
-  }'
-  
-  echo "Setting bucket policy for $bucket_name..."
-  aws s3api put-bucket-policy --bucket "$bucket_name" --policy "$bucket_policy"
-  
-  # Set CORS configuration
-  local cors_config='[
-    {
-        "AllowedHeaders": [
-            "*"
-        ],
-        "AllowedMethods": [
-            "GET",
-            "HEAD",
-            "PUT",
-            "POST",
-            "DELETE"
-        ],
-        "AllowedOrigins": [
-            "*"
-        ],
-        "ExposeHeaders": []
-    }
-  ]'
-  
-  echo "Setting CORS configuration for $bucket_name..."
-  aws s3api put-bucket-cors --bucket "$bucket_name" --cors-configuration "$cors_config"
-  
-  echo "✓ Bucket $bucket_name configured successfully"
-}
-
-# Configure PDF bucket if provided
-if [ -n "${PDF_TO_PDF_BUCKET:-}" ]; then
-  configure_bucket "$PDF_TO_PDF_BUCKET"
-fi
-
-# Configure HTML bucket if provided
-if [ -n "${PDF_TO_HTML_BUCKET:-}" ]; then
-  configure_bucket "$PDF_TO_HTML_BUCKET"
-fi
-
-echo "✅ S3 bucket configuration completed!"
 
 # --------------------------------------------------
-# 6. Deploy Frontend
+# 5. Deploy Frontend
 # --------------------------------------------------
 
 echo "🚀 Starting frontend deployment..."
@@ -240,7 +176,7 @@ else
 fi
 
 # --------------------------------------------------
-# 7. Final Summary
+# 6. Final Summary
 # --------------------------------------------------
 
 echo ""

@@ -134,24 +134,104 @@ else
 fi
 
 # --------------------------------------------------
-# 4. Start the build
+# 4. Start the build and wait for completion
 # --------------------------------------------------
 
 echo "Starting build for project '$PROJECT_NAME'..."
-aws codebuild start-build \
+BUILD_ID=$(aws codebuild start-build \
   --project-name "$PROJECT_NAME" \
-  --no-cli-pager \
-  --output json
+  --query 'build.id' \
+  --output text \
+  --no-cli-pager)
 
 if [ $? -eq 0 ]; then
-  echo "✓ Build started successfully."
+  echo "✓ Build started successfully. Build ID: $BUILD_ID"
 else
   echo "✗ Failed to start the build."
   exit 1
 fi
 
+# Wait for build to complete
+echo "Waiting for build to complete..."
+aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text
+BUILD_STATUS="IN_PROGRESS"
+
+while [ "$BUILD_STATUS" = "IN_PROGRESS" ]; do
+  sleep 30
+  BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text)
+  echo "Build status: $BUILD_STATUS"
+done
+
+if [ "$BUILD_STATUS" != "SUCCEEDED" ]; then
+  echo "❌ Build failed with status: $BUILD_STATUS"
+  echo "Check CodeBuild logs for details: https://console.aws.amazon.com/codesuite/codebuild/projects/$PROJECT_NAME/build/$BUILD_ID/"
+  exit 1
+fi
+
+echo "✅ Build completed successfully!"
+
 # --------------------------------------------------
-# 5. List existing CodeBuild projects
+# 5. Extract Amplify App ID and Deploy Frontend
+# --------------------------------------------------
+
+echo "🔍 Extracting Amplify App ID from CDK stack outputs..."
+
+# Get the stack name (assuming it's the default CDK stack name)
+cd cdk_backend
+STACK_NAME=$(cdk list | head -1)
+cd ..
+echo "CDK Stack Name: $STACK_NAME"
+
+# Extract Amplify App ID from CloudFormation outputs
+AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
+  --output text)
+
+if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "None" ]; then
+  echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
+  echo "Available outputs:"
+  aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].Outputs'
+  exit 1
+fi
+
+echo "✅ Found Amplify App ID: $AMPLIFY_APP_ID"
+
+# Build frontend
+echo "🔨 Building frontend application..."
+cd pdf_ui
+npm ci
+npm run build
+zip -r frontend.zip build/
+
+# Deploy to Amplify
+echo "🚀 Deploying frontend to Amplify..."
+echo "Creating Amplify deployment..."
+aws amplify create-deployment \
+  --app-id $AMPLIFY_APP_ID \
+  --branch-name main \
+  --output json > deployment_response.json
+
+echo "Extracting upload URL and job ID..."
+UPLOAD_URL=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['zipUploadUrl'])")
+JOB_ID=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['jobId'])")
+echo "Upload URL: $UPLOAD_URL"
+echo "Job ID: $JOB_ID"
+
+echo "Uploading frontend.zip to Amplify..."
+curl -X PUT -T frontend.zip "$UPLOAD_URL"
+
+echo "Starting deployment..."
+aws amplify start-deployment \
+  --app-id $AMPLIFY_APP_ID \
+  --branch-name main \
+  --job-id $JOB_ID
+
+echo "✅ Frontend deployment initiated successfully!"
+echo "🌐 Your app will be available at: https://main.${AMPLIFY_APP_ID}.amplifyapp.com"
+
+# --------------------------------------------------
+# 6. List existing CodeBuild projects
 # --------------------------------------------------
 
 echo "Current CodeBuild projects:"
@@ -160,4 +240,12 @@ aws codebuild list-projects --output table
 # --------------------------------------------------
 # End of script
 # --------------------------------------------------
+echo ""
+echo "🎉 Deployment Complete!"
+echo "📊 Summary:"
+echo "  - CodeBuild Project: $PROJECT_NAME"
+echo "  - CDK Stack: $STACK_NAME"
+echo "  - Amplify App: $AMPLIFY_APP_ID"
+echo "  - Frontend URL: https://main.${AMPLIFY_APP_ID}.amplifyapp.com"
+echo ""
 exit 0

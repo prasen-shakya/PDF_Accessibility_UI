@@ -15,13 +15,35 @@ phases:
     commands:
       - echo "Installing frontend dependencies..."
       - npm ci
+      - echo "Creating .env file with environment variables..."
+      - |
+        # Extract AWS region from User Pool ID (format: region_poolId)
+        AWS_REGION=$(echo $REACT_APP_USER_POOL_ID | cut -d'_' -f1)
+        cat > .env << EOF
+        # Environment variables for PDF Accessibility UI
+        REACT_APP_MAINTENANCE_MODE=false
+        REACT_APP_AUTHORITY=cognito-idp.$AWS_REGION.amazonaws.com/$REACT_APP_USER_POOL_ID
+        REACT_APP_AWS_REGION=$AWS_REGION
+        REACT_APP_PDF_BUCKET_NAME=$PDF_TO_PDF_BUCKET
+        REACT_APP_BUCKET_REGION=$AWS_REGION
+        REACT_APP_HTML_BUCKET_NAME=$PDF_TO_HTML_BUCKET
+        REACT_APP_DOMAIN_PREFIX=$REACT_APP_USER_POOL_DOMAIN
+        REACT_APP_IDENTITY_POOL_ID=$REACT_APP_IDENTITY_POOL_ID
+        REACT_APP_UPDATE_FIRST_SIGN_IN=$REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT
+        REACT_APP_UPLOAD_QUOTA_API=$REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT
+        REACT_APP_USER_POOL_CLIENT_ID=$REACT_APP_USER_POOL_CLIENT_ID
+        REACT_APP_USER_POOL_ID=$REACT_APP_USER_POOL_ID
+        REACT_APP_HOSTED_UI_URL=$REACT_APP_AMPLIFY_APP_URL
+        EOF
+      - echo "Contents of .env file:"
+      - cat .env
 
   build:
     commands:
       - echo "Building React application..."
       - npm run build
       - echo "Creating deployment package..."
-      - zip -r frontend.zip build/
+      - cd build && zip -r build .
       - echo "Frontend build completed successfully"
 
   post_build:
@@ -53,8 +75,8 @@ phases:
         export UPLOAD_URL=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['zipUploadUrl'])")
       - >-
         export JOB_ID=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['jobId'])")
-      - echo "Uploading frontend.zip to Amplify..."
-      - curl -X PUT -T frontend.zip "$UPLOAD_URL"
+      - echo "Uploading build.zip to Amplify..."
+      - curl -X PUT -T build.zip "$UPLOAD_URL"
       - echo "Starting deployment..."
       - >-
         aws amplify start-deployment \

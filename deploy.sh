@@ -176,12 +176,8 @@ echo "✅ Build completed successfully!"
 
 echo "🔍 Extracting Amplify App ID from CDK stack outputs..."
 
-# Install CDK dependencies and get the stack name
-cd cdk_backend
-echo "Installing CDK dependencies..."
-npm ci
-STACK_NAME=$(cdk list | head -1)
-cd ..
+# Use the known CDK stack name
+STACK_NAME="CdkBackendStack"
 echo "CDK Stack Name: $STACK_NAME"
 
 # Extract Amplify App ID from CloudFormation outputs

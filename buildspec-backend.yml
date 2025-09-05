@@ -34,9 +34,9 @@ phases:
     commands:
       - echo "CDK deployment complete."
       - echo "Storing deployment info in SSM Parameter Store..."
-      - STACK_NAME="CdkBackendStack"
+      - export STACK_NAME="CdkBackendStack"
       - >-
-        AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
+        export AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
           --stack-name $STACK_NAME \
           --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
           --output text)

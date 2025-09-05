@@ -1,0 +1,56 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing AWS CDK CLI..."
+      - npm install -g aws-cdk
+      - echo "Changing into cdk_backend directory"
+      - cd cdk_backend
+      - echo "Installing npm dependencies"
+      - npm ci
+
+  pre_build:
+    commands:
+      - echo "Building TypeScript sources"
+      - npm run build
+      - echo "Bootstrapping CDK (no approval)..."
+      - >-
+        cdk bootstrap --require-approval never \
+          -c PDF_TO_PDF_BUCKET=$PDF_TO_PDF_BUCKET \
+          -c PDF_TO_HTML_BUCKET=$PDF_TO_HTML_BUCKET
+
+  build:
+    commands:
+      - echo "Deploying all CDK stacks..."
+      - >-
+        cdk deploy --all --require-approval never \
+          -c PDF_TO_PDF_BUCKET=$PDF_TO_PDF_BUCKET \
+          -c PDF_TO_HTML_BUCKET=$PDF_TO_HTML_BUCKET
+
+  post_build:
+    commands:
+      - echo "CDK deployment complete."
+      - echo "Storing deployment info in SSM Parameter Store..."
+      - STACK_NAME="CdkBackendStack"
+      - |
+        AMPLIFY_APP_ID=$(aws cloudformation describe-stacks \
+          --stack-name $STACK_NAME \
+          --query 'Stacks[0].Outputs[?OutputKey==`AmplifyAppId`].OutputValue' \
+          --output text)
+      - echo "Found Amplify App ID: $AMPLIFY_APP_ID"
+      - |
+        aws ssm put-parameter \
+          --name "/pdf-ui/$PROJECT_TIMESTAMP/amplify-app-id" \
+          --value "$AMPLIFY_APP_ID" \
+          --type "String" \
+          --overwrite
+      - |
+        aws ssm put-parameter \
+          --name "/pdf-ui/$PROJECT_TIMESTAMP/stack-name" \
+          --value "$STACK_NAME" \
+          --type "String" \
+          --overwrite
+      - echo "✅ Backend deployment completed and parameters stored"

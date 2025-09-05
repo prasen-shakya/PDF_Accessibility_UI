@@ -104,7 +104,7 @@ BACKEND_ENVIRONMENT='{
 BACKEND_SOURCE='{
   "type":"GITHUB",
   "location":"https://github.com/ASUCICREPO/PDF_accessability_UI.git",
-  "buildspec":"buildspec-backend.yml"
+  "buildspec":"buildspec.yml"
 }'
 
 ARTIFACTS='{"type":"NO_ARTIFACTS"}'

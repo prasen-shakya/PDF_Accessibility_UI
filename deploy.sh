@@ -157,7 +157,7 @@ aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus'
 BUILD_STATUS="IN_PROGRESS"
 
 while [ "$BUILD_STATUS" = "IN_PROGRESS" ]; do
-  sleep 30
+  sleep 15
   BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text)
   echo "Build status: $BUILD_STATUS"
 done

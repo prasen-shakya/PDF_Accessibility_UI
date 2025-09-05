@@ -6,11 +6,7 @@ phases:
       nodejs: 20
     commands:
       - echo "Retrieving deployment info from SSM Parameter Store..."
-      - |
-        AMPLIFY_APP_ID=$(aws ssm get-parameter \
-          --name "/pdf-ui/$PROJECT_TIMESTAMP/amplify-app-id" \
-          --query 'Parameter.Value' \
-          --output text)
+      - AMPLIFY_APP_ID=$(aws ssm get-parameter --name "/pdf-ui/$PROJECT_TIMESTAMP/amplify-app-id" --query 'Parameter.Value' --output text)
       - echo "Retrieved Amplify App ID: $AMPLIFY_APP_ID"
       - echo "Changing into pdf_ui directory"
       - cd pdf_ui
@@ -32,25 +28,15 @@ phases:
     commands:
       - echo "🚀 Deploying frontend to Amplify..."
       - echo "Creating Amplify deployment..."
-      - |
-        aws amplify create-deployment \
-          --app-id $AMPLIFY_APP_ID \
-          --branch-name main \
-          --output json > deployment_response.json
+      - aws amplify create-deployment --app-id $AMPLIFY_APP_ID --branch-name main --output json > deployment_response.json
       - echo "Extracting upload URL and job ID..."
-      - |
-        UPLOAD_URL=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['zipUploadUrl'])")
-      - |
-        JOB_ID=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['jobId'])")
+      - UPLOAD_URL=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['zipUploadUrl'])")
+      - JOB_ID=$(python3 -c "import json; data=json.load(open('deployment_response.json')); print(data['jobId'])")
       - echo "Upload URL: $UPLOAD_URL"
       - echo "Job ID: $JOB_ID"
       - echo "Uploading frontend.zip to Amplify..."
       - curl -X PUT -T frontend.zip "$UPLOAD_URL"
       - echo "Starting deployment..."
-      - |
-        aws amplify start-deployment \
-          --app-id $AMPLIFY_APP_ID \
-          --branch-name main \
-          --job-id $JOB_ID
+      - aws amplify start-deployment --app-id $AMPLIFY_APP_ID --branch-name main --job-id $JOB_ID
       - echo "✅ Frontend deployment initiated successfully!"
       - echo "🌐 Your app will be available at: https://main.${AMPLIFY_APP_ID}.amplifyapp.com"

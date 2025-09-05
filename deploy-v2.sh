@@ -118,7 +118,8 @@ aws codebuild create-project \
   --artifacts "$ARTIFACTS" \
   --environment "$BACKEND_ENVIRONMENT" \
   --service-role "$ROLE_ARN" \
-  --output json
+  --output json \
+  --no-cli-pager
 
 if [ $? -ne 0 ]; then
   echo "✗ Failed to create backend CodeBuild project"
@@ -133,7 +134,8 @@ echo "Starting backend build for project '$BACKEND_PROJECT_NAME'..."
 BACKEND_BUILD_ID=$(aws codebuild start-build \
   --project-name "$BACKEND_PROJECT_NAME" \
   --query 'build.id' \
-  --output text)
+  --output text \
+  --no-cli-pager)
 
 if [ $? -ne 0 ]; then
   echo "✗ Failed to start the backend build"
@@ -148,7 +150,7 @@ BUILD_STATUS="IN_PROGRESS"
 
 while [ "$BUILD_STATUS" = "IN_PROGRESS" ]; do
   sleep 15
-  BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$BACKEND_BUILD_ID" --query 'builds[0].buildStatus' --output text)
+  BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$BACKEND_BUILD_ID" --query 'builds[0].buildStatus' --output text --no-cli-pager)
   echo "Backend build status: $BUILD_STATUS"
 done
 
@@ -190,7 +192,8 @@ aws codebuild create-project \
   --artifacts "$ARTIFACTS" \
   --environment "$FRONTEND_ENVIRONMENT" \
   --service-role "$ROLE_ARN" \
-  --output json
+  --output json \
+  --no-cli-pager
 
 if [ $? -ne 0 ]; then
   echo "✗ Failed to create frontend CodeBuild project"
@@ -205,7 +208,8 @@ echo "Starting frontend build for project '$FRONTEND_PROJECT_NAME'..."
 FRONTEND_BUILD_ID=$(aws codebuild start-build \
   --project-name "$FRONTEND_PROJECT_NAME" \
   --query 'build.id' \
-  --output text)
+  --output text \
+  --no-cli-pager)
 
 if [ $? -ne 0 ]; then
   echo "✗ Failed to start the frontend build"
@@ -220,7 +224,7 @@ BUILD_STATUS="IN_PROGRESS"
 
 while [ "$BUILD_STATUS" = "IN_PROGRESS" ]; do
   sleep 15
-  BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$FRONTEND_BUILD_ID" --query 'builds[0].buildStatus' --output text)
+  BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$FRONTEND_BUILD_ID" --query 'builds[0].buildStatus' --output text --no-cli-pager)
   echo "Frontend build status: $BUILD_STATUS"
 done
 
@@ -270,6 +274,6 @@ echo "  - Amplify App: $AMPLIFY_APP_ID"
 echo "  - Frontend URL: https://main.${AMPLIFY_APP_ID}.amplifyapp.com"
 echo ""
 echo "Current CodeBuild projects:"
-aws codebuild list-projects --output table
+aws codebuild list-projects --output table --no-cli-pager
 
 exit 0

@@ -61,4 +61,3 @@ phases:
           --branch-name main \
           --job-id $JOB_ID
       - echo "✅ Frontend deployment initiated successfully!"
-      - echo "🌐 Your app will be available at: https://main.${AMPLIFY_APP_ID}.amplifyapp.com"

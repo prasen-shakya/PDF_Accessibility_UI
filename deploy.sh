@@ -265,7 +265,5 @@ echo "  - Backend Project: $BACKEND_PROJECT_NAME"
 echo "  - Frontend Project: ${PROJECT_NAME}-frontend"
 echo "  - CDK Stack: CdkBackendStack"
 echo ""
-echo "Current CodeBuild projects:"
-aws codebuild list-projects --output table --no-cli-pager
 
 exit 0

@@ -11,17 +11,59 @@
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .upload-container {
+    padding: 16px;
+    margin: 0 8px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-container {
+    padding: 12px;
+    margin: 0 4px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .upload-container {
+    padding: 8px;
+    margin: 0 2px;
+    max-width: 100%;
+  }
 }
 
 .upload-container-selected {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .upload-container-selected {
+    max-width: 100%;
+    margin: 0 8px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-container-selected {
+    max-width: 100%;
+    margin: 0 4px;
+    gap: 12px;
+  }
 }
 
 .upload-container-selected .upload-content {
@@ -35,6 +77,21 @@
   align-items: center;
   justify-content: flex-start;
   width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .upload-container-selected .upload-content {
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-container-selected .upload-content {
+    padding: 12px;
+    gap: 12px;
+  }
 }
 
 .upload-instructions {
@@ -72,6 +129,31 @@
   align-items: flex-start;
   justify-content: flex-start;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .upload-buttons {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-buttons {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .change-format-btn,
+  .upload-btn {
+    width: 100%;
+    max-width: 280px;
+  }
 }
 
 .change-format-btn {
@@ -132,6 +214,14 @@
   text-align: center;
   margin: 0;
   width: 480px;
+}
+
+@media (max-width: 768px) {
+  .disclaimer p {
+    width: 100%;
+    font-size: 14px;
+    line-height: 20px;
+  }
 }
 
 .upload-progress {
@@ -243,9 +333,16 @@
   display: flex;
   flex-direction: row;
   gap: 16px;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .format-options {
+    flex-direction: column;
+    gap: 12px;
+  }
 }
 
 .format-option {
@@ -259,6 +356,8 @@
   gap: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .format-option:hover {

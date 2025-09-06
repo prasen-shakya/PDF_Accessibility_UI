@@ -334,15 +334,42 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .processing-container {
-    padding: 16px;
+    padding: 12px;
     margin-top: 0px;
   }
 
   .processing-content {
-    padding: 20px;
+    padding: 16px;
     max-width: 100%;
+    margin: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .processing-container {
+    padding: 8px;
+    margin-top: 0px;
+  }
+
+  .processing-content {
+    padding: 12px;
+    max-width: 100%;
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 360px) {
+  .processing-container {
+    padding: 4px;
+    margin-top: 0px;
+  }
+
+  .processing-content {
+    padding: 8px;
+    max-width: 100%;
+    margin: 0 2px;
   }
 
   .processing-header h2 {
@@ -362,6 +389,66 @@
   .confirm-dialog {
     width: 95%;
     margin: 20px;
+  }
+
+  .confirm-actions {
+    flex-direction: column;
+  }
+
+  .confirm-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .processing-container {
+    padding: 12px;
+    margin-top: 0px;
+  }
+
+  .processing-content {
+    padding: 16px;
+    max-width: 100%;
+    margin: 0 5px;
+  }
+
+  .processing-header h2 {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .step-item {
+    gap: 10px;
+  }
+
+  .step-number {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .step-title {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .step-description {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .processing-description {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .time-info {
+    font-size: 13px;
+  }
+
+  .confirm-dialog {
+    width: 95%;
+    margin: 10px;
   }
 
   .confirm-actions {

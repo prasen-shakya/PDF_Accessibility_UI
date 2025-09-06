@@ -76,3 +76,41 @@ button:hover {
   color: #555; /* Subtle gray */
   margin: 10px 0;
 }
+
+/* Mobile-specific optimizations */
+@media (max-width: 600px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  button, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve readability on mobile */
+  .upload-section, .download-section {
+    margin: 10px 0;
+    padding: 15px;
+  }
+  
+  /* Better spacing for mobile */
+  .note {
+    font-size: 12px;
+    margin: 8px 0;
+  }
+}
+
+/* Prevent horizontal scrolling on mobile */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}

@@ -46,6 +46,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   // Left navigation state
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
 
   // Fetch credentials once user is authenticated
@@ -217,9 +218,19 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
-        <LeftNav isCollapsed={isNavCollapsed} setIsCollapsed={setIsNavCollapsed} />
+        <LeftNav 
+          isCollapsed={isNavCollapsed} 
+          setIsCollapsed={setIsNavCollapsed}
+          mobileOpen={mobileNavOpen}
+          setMobileOpen={setMobileNavOpen}
+        />
 
-        <Box sx={{ padding: 3, paddingLeft: { xs: 3, md: isNavCollapsed ? '90px' : '390px' }, transition: 'padding-left 0.3s ease' }}>
+        <Box sx={{ 
+          padding: { xs: 2, sm: 3 }, 
+          paddingLeft: { xs: 2, md: isNavCollapsed ? '90px' : '390px' }, 
+          transition: 'padding-left 0.3s ease',
+          minHeight: '100vh'
+        }}>
           <Header
             handleSignOut={() => auth.removeUser()}
             usageCount={usageCount}
@@ -227,6 +238,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
             usageError={usageError}
             loadingUsage={loadingUsage}
             maxFilesAllowed={maxFilesAllowed}
+            onMenuClick={() => setMobileNavOpen(true)}
           />
 
           <FirstSignInDialog />
@@ -242,7 +254,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
           <HeroSection />
 
-          <Container maxWidth="lg" sx={{ marginTop: 0 }}>
+          <Container maxWidth="lg" sx={{ marginTop: 0, padding: { xs: 0, sm: 1 } }}>
 
             {currentPage === 'upload' && (
               <UploadSection

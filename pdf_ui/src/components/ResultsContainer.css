@@ -349,15 +349,42 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .results-container {
-    padding: 16px;
-    margin-top: 20px;
+    padding: 12px;
+    margin-top: 16px;
   }
 
   .results-content {
-    padding: 20px;
+    padding: 16px;
     max-width: 100%;
+    margin: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .results-container {
+    padding: 8px;
+    margin-top: 12px;
+  }
+
+  .results-content {
+    padding: 12px;
+    max-width: 100%;
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 360px) {
+  .results-container {
+    padding: 4px;
+    margin-top: 8px;
+  }
+
+  .results-content {
+    padding: 8px;
+    max-width: 100%;
+    margin: 0 2px;
   }
 
   .results-content h2 {
@@ -422,5 +449,93 @@
 
   .file-status::before {
     font-size: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .results-container {
+    padding: 12px;
+    margin-top: 16px;
+  }
+
+  .results-content {
+    padding: 16px;
+    max-width: 100%;
+    margin: 0 5px;
+  }
+
+  .results-content h2 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .button-group {
+    gap: 8px;
+  }
+
+  .download-btn,
+  .view-report-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+
+  .confirm-dialog {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .confirm-actions {
+    flex-direction: column;
+  }
+
+  .confirm-btn {
+    width: 100%;
+  }
+
+  .file-success-container {
+    margin: 12px 0;
+  }
+
+  .file-info-card {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  .file-name-section {
+    gap: 10px;
+  }
+
+  .file-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .file-icon img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .file-name {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .file-status {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .file-status::before {
+    font-size: 12px;
+  }
+
+  .description {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .processing-time {
+    font-size: 13px;
   }
 }

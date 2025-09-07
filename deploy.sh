@@ -26,7 +26,7 @@ echo ""
 
 # Prompt for PDF-to-PDF bucket with default
 if [ -n "${PDF_TO_PDF_BUCKET:-}" ] && [ "${PDF_TO_PDF_BUCKET}" != "Null" ]; then
-  read -rp "Enter PDF-to-PDF bucket name (press Enter to use: ${PDF_TO_PDF_BUCKET}): " USER_PDF_TO_PDF_BUCKET
+  read -rp "Enter PDF-to-PDF bucket name (or press Enter to use default: ${PDF_TO_PDF_BUCKET}): " USER_PDF_TO_PDF_BUCKET
   PDF_TO_PDF_BUCKET="${USER_PDF_TO_PDF_BUCKET:-$PDF_TO_PDF_BUCKET}"
 else
   read -rp "Enter PDF-to-PDF bucket name (leave empty if not using PDF-to-PDF processing): " PDF_TO_PDF_BUCKET
@@ -34,7 +34,7 @@ fi
 
 # Prompt for PDF-to-HTML bucket with default
 if [ -n "${PDF_TO_HTML_BUCKET:-}" ] && [ "${PDF_TO_HTML_BUCKET}" != "Null" ]; then
-  read -rp "Enter PDF-to-HTML bucket name (press Enter to use: ${PDF_TO_HTML_BUCKET}): " USER_PDF_TO_HTML_BUCKET
+  read -rp "Enter PDF-to-HTML bucket name (or press Enter to use default: ${PDF_TO_HTML_BUCKET}): " USER_PDF_TO_HTML_BUCKET
   PDF_TO_HTML_BUCKET="${USER_PDF_TO_HTML_BUCKET:-$PDF_TO_HTML_BUCKET}"
 else
   read -rp "Enter PDF-to-HTML bucket name (leave empty if not using PDF-to-HTML processing): " PDF_TO_HTML_BUCKET

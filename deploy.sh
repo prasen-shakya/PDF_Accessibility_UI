@@ -10,17 +10,40 @@ PROJECT_NAME="pdf-ui-${TIMESTAMP}"
 echo "Auto-generated project name: $PROJECT_NAME"
 
 # Configure S3 buckets (at least one required)
-if [ -z "${PDF_TO_PDF_BUCKET:-}" ]; then
+echo ""
+echo "🔧 UI Configuration:"
+
+# Show detected buckets if available
+if [ -n "${PDF_TO_PDF_BUCKET:-}" ] && [ "${PDF_TO_PDF_BUCKET}" != "Null" ]; then
+  echo "   PDF-to-PDF Bucket: ${PDF_TO_PDF_BUCKET}"
+fi
+
+if [ -n "${PDF_TO_HTML_BUCKET:-}" ] && [ "${PDF_TO_HTML_BUCKET}" != "Null" ]; then
+  echo "   PDF-to-HTML Bucket: ${PDF_TO_HTML_BUCKET}"
+fi
+
+echo ""
+
+# Prompt for PDF-to-PDF bucket with default
+if [ -n "${PDF_TO_PDF_BUCKET:-}" ] && [ "${PDF_TO_PDF_BUCKET}" != "Null" ]; then
+  read -rp "Enter PDF-to-PDF bucket name (or press Enter to use default: ${PDF_TO_PDF_BUCKET}): " USER_PDF_TO_PDF_BUCKET
+  PDF_TO_PDF_BUCKET="${USER_PDF_TO_PDF_BUCKET:-$PDF_TO_PDF_BUCKET}"
+else
   read -rp "Enter PDF-to-PDF bucket name (leave empty if not using PDF-to-PDF processing): " PDF_TO_PDF_BUCKET
 fi
 
-if [ -z "${PDF_TO_HTML_BUCKET:-}" ]; then
+# Prompt for PDF-to-HTML bucket with default
+if [ -n "${PDF_TO_HTML_BUCKET:-}" ] && [ "${PDF_TO_HTML_BUCKET}" != "Null" ]; then
+  read -rp "Enter PDF-to-HTML bucket name (or press Enter to use default: ${PDF_TO_HTML_BUCKET}): " USER_PDF_TO_HTML_BUCKET
+  PDF_TO_HTML_BUCKET="${USER_PDF_TO_HTML_BUCKET:-$PDF_TO_HTML_BUCKET}"
+else
   read -rp "Enter PDF-to-HTML bucket name (leave empty if not using PDF-to-HTML processing): " PDF_TO_HTML_BUCKET
 fi
 
 # Validate that at least one bucket is provided
-if [ -z "${PDF_TO_PDF_BUCKET:-}" ] && [ -z "${PDF_TO_HTML_BUCKET:-}" ]; then
-  echo "❌ Error: At least one bucket name is required (PDF_TO_PDF_BUCKET or PDF_TO_HTML_BUCKET)"
+if ([ -z "${PDF_TO_PDF_BUCKET:-}" ] || [ "${PDF_TO_PDF_BUCKET}" = "Null" ]) && ([ -z "${PDF_TO_HTML_BUCKET:-}" ] || [ "${PDF_TO_HTML_BUCKET}" = "Null" ]); then
+  echo "❌ Error: At least one bucket name is required"
+  echo "   Please provide either PDF_TO_PDF_BUCKET or PDF_TO_HTML_BUCKET"
   exit 1
 fi
 
@@ -150,7 +173,7 @@ echo "Creating Backend CodeBuild project: $BACKEND_PROJECT_NAME"
 ENV_VARS_ARRAY=""
 
 # Add PDF_TO_PDF_BUCKET if provided
-if [ -n "${PDF_TO_PDF_BUCKET:-}" ]; then
+if [ -n "${PDF_TO_PDF_BUCKET:-}" ] && [ "${PDF_TO_PDF_BUCKET}" != "Null" ]; then
   ENV_VARS_ARRAY='{
       "name":  "PDF_TO_PDF_BUCKET",
       "value": "'"$PDF_TO_PDF_BUCKET"'",
@@ -159,7 +182,7 @@ if [ -n "${PDF_TO_PDF_BUCKET:-}" ]; then
 fi
 
 # Add PDF_TO_HTML_BUCKET if provided
-if [ -n "${PDF_TO_HTML_BUCKET:-}" ]; then
+if [ -n "${PDF_TO_HTML_BUCKET:-}" ] && [ "${PDF_TO_HTML_BUCKET}" != "Null" ]; then
   if [ -n "$ENV_VARS_ARRAY" ]; then
     ENV_VARS_ARRAY="$ENV_VARS_ARRAY,"
   fi
@@ -173,9 +196,15 @@ fi
 BACKEND_ENVIRONMENT='{
   "type": "LINUX_CONTAINER",
   "image": "aws/codebuild/amazonlinux-x86_64-standard:5.0",
-  "computeType": "BUILD_GENERAL1_SMALL",
-  "environmentVariables": ['"$ENV_VARS_ARRAY"']
-}'
+  "computeType": "BUILD_GENERAL1_SMALL"'
+
+# Add environment variables if any exist
+if [ -n "$ENV_VARS_ARRAY" ]; then
+  BACKEND_ENVIRONMENT="$BACKEND_ENVIRONMENT"',
+  "environmentVariables": ['"$ENV_VARS_ARRAY"']'
+fi
+
+BACKEND_ENVIRONMENT="$BACKEND_ENVIRONMENT"'}'
 
 # Backend buildspec
 BACKEND_SOURCE='{

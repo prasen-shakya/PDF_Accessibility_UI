@@ -98,7 +98,7 @@ echo "Creating Frontend CodeBuild project: $FRONTEND_PROJECT_NAME"
 FRONTEND_ENV_VARS_ARRAY=""
 
 # Add bucket variables if provided
-if [ -n "${PDF_TO_PDF_BUCKET:-}" ]; then
+if [ -n "${PDF_TO_PDF_BUCKET:-}" ] && [ "${PDF_TO_PDF_BUCKET}" != "Null" ]; then
   FRONTEND_ENV_VARS_ARRAY='{
       "name":  "PDF_TO_PDF_BUCKET",
       "value": "'"$PDF_TO_PDF_BUCKET"'",
@@ -106,7 +106,7 @@ if [ -n "${PDF_TO_PDF_BUCKET:-}" ]; then
     }'
 fi
 
-if [ -n "${PDF_TO_HTML_BUCKET:-}" ]; then
+if [ -n "${PDF_TO_HTML_BUCKET:-}" ] && [ "${PDF_TO_HTML_BUCKET}" != "Null" ]; then
   if [ -n "$FRONTEND_ENV_VARS_ARRAY" ]; then
     FRONTEND_ENV_VARS_ARRAY="$FRONTEND_ENV_VARS_ARRAY,"
   fi
@@ -146,9 +146,15 @@ add_frontend_env_var "REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT" "$REACT_APP_UPDA
 FRONTEND_ENVIRONMENT='{
   "type": "LINUX_CONTAINER",
   "image": "aws/codebuild/amazonlinux-x86_64-standard:5.0",
-  "computeType": "BUILD_GENERAL1_MEDIUM",
-  "environmentVariables": ['"$FRONTEND_ENV_VARS_ARRAY"']
-}'
+  "computeType": "BUILD_GENERAL1_MEDIUM"'
+
+# Add environment variables if any exist
+if [ -n "$FRONTEND_ENV_VARS_ARRAY" ]; then
+  FRONTEND_ENVIRONMENT="$FRONTEND_ENVIRONMENT"',
+  "environmentVariables": ['"$FRONTEND_ENV_VARS_ARRAY"']'
+fi
+
+FRONTEND_ENVIRONMENT="$FRONTEND_ENVIRONMENT"'}'
 
 # Debug: Show the environment variables being passed
 echo "🔍 Debug: Environment variables JSON:"

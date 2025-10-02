@@ -4,7 +4,10 @@ import boto3
 
 def handler(event, context):
     print('Post Confirmation Trigger Event:', json.dumps(event, indent=2))
-
+    if event['triggerSource'] != 'PostConfirmation_ConfirmSignUp':
+        print(f"Skipping initialization - trigger source is {event['triggerSource']}")
+        return event
+    
     # Retrieve group names from environment variables
     DEFAULT_GROUP = str(os.environ.get('DEFAULT_GROUP_NAME'))
     AMAZON_GROUP = str(os.environ.get('AMAZON_GROUP_NAME'))

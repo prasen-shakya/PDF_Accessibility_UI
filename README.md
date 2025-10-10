@@ -15,17 +15,14 @@ The application features user authentication, quota management, real-time proces
 
 ## Table of Contents
 
-| Index                                                             | Description                          |
-| ----------------------------------------------------------------- | ------------------------------------ |
-| [Prerequisites](#prerequisites)                                   | Requirements before deployment       |
-| [Automated One-Click Deployment](#automated-one-click-deployment) | How to deploy the UI                 |
-| [Using the Application](#using-the-application)                   | User guide for the web interface     |
-| [User Management](#user-management)                               | Understanding user groups and quotas |
-| [Infrastructure Components](#infrastructure-components)           | AWS resources created                |
-| [Monitoring](#monitoring)                                         | System monitoring and logs           |
-| [Troubleshooting](#troubleshooting)                               | Common issues and solutions          |
-| [Manual Deployment](#manual-deployment)                           | Step-by-step manual deployment       |
-| [Contributing](#contributing)                                     | How to contribute to the project     |
+| Index                                                             | Description                      |
+| ----------------------------------------------------------------- | -------------------------------- |
+| [Prerequisites](#prerequisites)                                   | Requirements before deployment   |
+| [Automated One-Click Deployment](#automated-one-click-deployment) | How to deploy the UI             |
+| [Using the Application](#using-the-application)                   | User guide for the web interface |
+| [Infrastructure Components](#infrastructure-components)           | AWS resources created            |
+| [Monitoring](#monitoring)                                         | System monitoring and logs       |
+| [Contributing](#contributing)                                     | How to contribute to the project |
 
 ## Prerequisites
 

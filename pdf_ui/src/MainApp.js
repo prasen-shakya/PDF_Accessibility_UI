@@ -1,20 +1,22 @@
 // src/MainApp.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Button, Typography } from '@mui/material';
+import { Container, Box } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import Header from './components/Header';
 import UploadSection from './components/UploadSection';
-import DownloadSection from './components/DownloadSection';
+import ProcessingContainer from './components/ProcessingContainer';
+import ResultsContainer from './components/ResultsContainer';
 import LeftNav from './components/LeftNav';
-import ElapsedTimer from './components/ElapsedTimer';
 import theme from './theme';
-import AccessibilityChecker from './components/AccessibilityChecker';
 import FirstSignInDialog from './components/FirstSignInDialog';
+import HeroSection from './components/HeroSection';
+import InformationBlurb from './components/InformationBlurb';
 
 import { Authority, CheckAndIncrementQuota } from './utilities/constants';
 import CustomCredentialsProvider from './utilities/CustomCredentialsProvider';
+import DeploymentPopup from './components/DeploymentPopup';
 
 function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const auth = useAuth();
@@ -22,21 +24,30 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   // AWS & file states
   const [awsCredentials, setAwsCredentials] = useState(null);
-  const [uploadedFileName, setUploadedFileName] = useState('');
-  const [updatedFileName, setUpdatedFileName] = useState('');
-  const [uploadedAt, setUploadedAt] = useState(null);
-  const [isFileReady, setIsFileReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState('upload');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [processedResult, setProcessedResult] = useState(null);
+  const [processingStartTime, setProcessingStartTime] = useState(null);
  
-  // Control whether AccessibilityReport is open
-  const [reportOpen, setReportOpen] = useState(false);
 
   // Centralized Usage State
   const [usageCount, setUsageCount] = useState(0);
+  const [pdf2pdfCount, setPdf2pdfCount] = useState(0);
+  const [pdf2htmlCount, setPdf2htmlCount] = useState(0);
   const [maxFilesAllowed, setMaxFilesAllowed] = useState(3); // Default value
   const [maxPagesAllowed, setMaxPagesAllowed] = useState(10); // Default value
   const [maxSizeAllowedMB, setMaxSizeAllowedMB] = useState(25); // Default value
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageError, setUsageError] = useState('');
+
+  // Deployment validation state
+  const [showDeploymentPopup, setShowDeploymentPopup] = useState(false);
+  const [bucketValidation, setBucketValidation] = useState(null);
+
+  // Left navigation state
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
 
   // Fetch credentials once user is authenticated
   useEffect(() => {
@@ -49,7 +60,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
           const customCredentialsProvider = new CustomCredentialsProvider();
           customCredentialsProvider.loadFederatedLogin({ domain, token });
 
-          const { credentials: c, identityId } =
+          const { credentials: c } =
             await customCredentialsProvider.getCredentialsAndIdentityId();
 
           setAwsCredentials({
@@ -73,7 +84,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   }, [auth.isAuthenticated, isLoggingOut, navigate]);
 
   // FUNCTION: Fetch current usage from the backend (mode="check")
-  const refreshUsage = async () => {
+  const refreshUsage = useCallback(async () => {
     if (!auth.isAuthenticated) return; // not logged in yet
     setLoadingUsage(true);
     setUsageError('');
@@ -88,7 +99,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     try {
       const res = await fetch(CheckAndIncrementQuota, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${auth.user?.id_token}`
         },
@@ -104,6 +115,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
       const data = await res.json();
       setUsageCount(data.currentUsage ?? 0);
+      setPdf2pdfCount(data.pdf2pdfCount ?? 0);
+      setPdf2htmlCount(data.pdf2htmlCount ?? 0);
       setMaxFilesAllowed(data.maxFilesAllowed ?? 3);
       setMaxPagesAllowed(data.maxPagesAllowed ?? 10);
       setMaxSizeAllowedMB(data.maxSizeAllowedMB ?? 25);
@@ -113,10 +126,10 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     } finally {
       setLoadingUsage(false);
     }
-  };
+  }, [auth.isAuthenticated, auth.user]);
 
   // FUNCTION: Initialize limits from ID token
-  const initializeLimitsFromProfile = () => {
+  const initializeLimitsFromProfile = useCallback(() => {
     if (auth.isAuthenticated && auth.user?.profile) {
       const profile = auth.user.profile;
 
@@ -128,7 +141,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       if (customMaxPages) setMaxPagesAllowed(parseInt(customMaxPages, 10));
       if (customMaxSizeMB) setMaxSizeAllowedMB(parseInt(customMaxSizeMB, 10));
     }
-  };
+  }, [auth.isAuthenticated, auth.user]);
 
   // Call refreshUsage whenever the user becomes authenticated
   useEffect(() => {
@@ -136,33 +149,53 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       initializeLimitsFromProfile();
       refreshUsage();
     }
-  }, [auth.isAuthenticated]);
+  }, [auth.isAuthenticated, initializeLimitsFromProfile, refreshUsage]);
+
+  // Bucket validation is now only checked when users select format options
+
+  // Handler for showing deployment popup from child components
+  const handleShowDeploymentPopup = (validation) => {
+    setBucketValidation(validation);
+    setShowDeploymentPopup(true);
+  };
 
   // Handle events from child components
-  const handleUploadComplete = (updated_filename, original_fileName) => {
+  const handleUploadComplete = (updated_filename, original_fileName, format = 'pdf') => {
     console.log('Upload completed, new file name:', updated_filename);
     console.log('Original file name:', original_fileName);
+    console.log('Selected format:', format);
 
-    setUploadedFileName(original_fileName);
-    setUpdatedFileName(updated_filename);
+    const fileData = {
+      name: original_fileName,
+      updatedName: updated_filename,
+      format: format,
+      size: 0 // We'll get this from the upload component if needed
+    };
 
-    setUploadedAt(Date.now());
-    setIsFileReady(false);
+    setUploadedFile(fileData);
+    setProcessingStartTime(Date.now()); // Track when processing starts
+    setCurrentPage('processing');
 
     // After a successful upload (and increment usage),
     // refresh usage so the new count shows up
     refreshUsage();
   };
 
-  const handleFileReady = () => {
-    setIsFileReady(true);
+  const handleProcessingComplete = (result) => {
+    // Calculate processing time
+    const processingTime = processingStartTime
+      ? Math.round((Date.now() - processingStartTime) / 1000) // Convert to seconds
+      : null;
+
+    setProcessedResult({ ...result, processingTime });
+    setCurrentPage('results');
   };
 
   const handleNewUpload = () => {
-    setUploadedFileName('');
-    setUpdatedFileName('');
-    setUploadedAt(null);
-    setIsFileReady(false);
+    setCurrentPage('upload');
+    setUploadedFile(null);
+    setProcessedResult(null);
+    setProcessingStartTime(null);
   };
 
   // Handle authentication loading and errors
@@ -184,10 +217,20 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <LeftNav />
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f4f6f8' }}>
+        <LeftNav 
+          isCollapsed={isNavCollapsed} 
+          setIsCollapsed={setIsNavCollapsed}
+          mobileOpen={mobileNavOpen}
+          setMobileOpen={setMobileNavOpen}
+        />
 
-        <Box sx={{ flexGrow: 1, padding: 3, backgroundColor: '#f4f6f8' }}>
+        <Box sx={{ 
+          padding: { xs: 2, sm: 3 }, 
+          paddingLeft: { xs: 2, md: isNavCollapsed ? '90px' : '390px' }, 
+          transition: 'padding-left 0.3s ease',
+          minHeight: '100vh'
+        }}>
           <Header
             handleSignOut={() => auth.removeUser()}
             usageCount={usageCount}
@@ -195,99 +238,75 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
             usageError={usageError}
             loadingUsage={loadingUsage}
             maxFilesAllowed={maxFilesAllowed}
-          /> 
+            onMenuClick={() => setMobileNavOpen(true)}
+          />
 
           <FirstSignInDialog />
 
-          <Container maxWidth="lg" sx={{ marginTop: 4 }}>
-            <Box
-              sx={{
-                textAlign: 'center',
-                padding: 4,
-                border: '1px dashed gray',
-                borderRadius: '12px',
-                marginBottom: 4,
-                backgroundColor: '#fff',
-                boxShadow: '0px 2px 10px rgba(0,0,0,0.1)',
-              }}
-            >
-              <Typography variant="h5" gutterBottom>
-                Remediate a PDF document
-              </Typography>
-              <Typography
-                variant="body1"
-                color="textSecondary"
-                sx={{ marginBottom: 2 }}
-              >
-                Drag & drop your PDF file below, or click to select it.
-              </Typography>
-
-                      
-            <UploadSection
-              onUploadComplete={handleUploadComplete}
-              awsCredentials={awsCredentials}
-              currentUsage={usageCount}
-              maxFilesAllowed={maxFilesAllowed}
-              maxPagesAllowed={maxPagesAllowed}
-              maxSizeAllowedMB={maxSizeAllowedMB}
-              onUsageRefresh={refreshUsage}
-              setUsageCount={setUsageCount}
-              isFileUploaded={!!uploadedFileName}
+          {/* Deployment popup for bucket configuration - only shown when triggered */}
+          {showDeploymentPopup && bucketValidation && (
+            <DeploymentPopup
+              open={showDeploymentPopup}
+              onClose={() => setShowDeploymentPopup(false)}
+              validation={bucketValidation}
             />
+          )}
 
+          <HeroSection />
 
-              {uploadedFileName && (
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={handleNewUpload}
-                  sx={{ marginTop: 2 }}
-                >
-                  Upload a New PDF
-                </Button>
-              )}
-            </Box>
+          <Container maxWidth="lg" sx={{ marginTop: 0, padding: { xs: 0, sm: 1 } }}>
 
-            <Box
-              sx={{
-                textAlign: 'center',
-                padding: 4,
-                borderRadius: '12px',
-                backgroundColor: '#fff',
-                boxShadow: '0px 2px 10px rgba(0,0,0,0.1)',
-                marginBottom: 4,
-              }}
-            >
-              <ElapsedTimer uploadedAt={uploadedAt} isFileReady={isFileReady} />
-            </Box>
-
-            {uploadedFileName && (
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  padding: 4,
-                  borderRadius: '12px',
-                  backgroundColor: '#fff',
-                  boxShadow: '0px 2px 10px rgba(0,0,0,0.1)',
-                  marginTop: 4,
-                }}
-              >
-                <DownloadSection
-                  originalFileName={uploadedFileName}
-                  updatedFilename={updatedFileName}
-                  onFileReady={handleFileReady}
-                  awsCredentials={awsCredentials}
-                />
-                <AccessibilityChecker
-                  open={reportOpen}
-                  onClose={() => setReportOpen(false)}
-                  originalFileName={uploadedFileName}
-                  updatedFilename={updatedFileName}
-                  awsCredentials={awsCredentials}
-                />
-              </Box>
+            {currentPage === 'upload' && (
+              <UploadSection
+                onUploadComplete={handleUploadComplete}
+                awsCredentials={awsCredentials}
+                currentUsage={usageCount}
+                maxFilesAllowed={maxFilesAllowed}
+                maxPagesAllowed={maxPagesAllowed}
+                maxSizeAllowedMB={maxSizeAllowedMB}
+                onUsageRefresh={refreshUsage}
+                setUsageCount={setUsageCount}
+                isFileUploaded={!!uploadedFile}
+                onShowDeploymentPopup={handleShowDeploymentPopup}
+              />
             )}
+
+            {currentPage === 'processing' && uploadedFile && (
+              <ProcessingContainer
+                originalFileName={uploadedFile.name}
+                updatedFilename={uploadedFile.updatedName}
+                onFileReady={(downloadUrl) => handleProcessingComplete({ url: downloadUrl })}
+                awsCredentials={awsCredentials}
+                selectedFormat={uploadedFile.format}
+                onNewUpload={handleNewUpload}
+              />
+            )}
+
+            {currentPage === 'processing' && !uploadedFile && (
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                <p>Loading processing page...</p>
+              </div>
+            )}
+
+            {currentPage === 'results' && (
+              <ResultsContainer
+                fileName={uploadedFile?.name}
+                processedResult={processedResult}
+                format={uploadedFile?.format}
+                processingTime={processedResult?.processingTime}
+                originalFileName={uploadedFile?.name}
+                updatedFilename={uploadedFile?.updatedName}
+                awsCredentials={awsCredentials}
+                onNewUpload={handleNewUpload}
+              />
+            )}
+
+
           </Container>
+
+          <Box sx={{ marginTop: 8 }}>
+            <InformationBlurb />
+          </Box>
         </Box>
       </Box>
     </ThemeProvider>

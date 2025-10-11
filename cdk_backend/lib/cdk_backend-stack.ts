@@ -16,71 +16,72 @@ export class CdkBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     
-    const bucketName = this.node.tryGetContext('bucketName');
-    const githubToken = this.node.tryGetContext('githubToken');
+    const PDF_TO_PDF_BUCKET = this.node.tryGetContext('PDF_TO_PDF_BUCKET') || "Null";
+    const PDF_TO_HTML_BUCKET = this.node.tryGetContext('PDF_TO_HTML_BUCKET') || "Null";
 
-    if (!githubToken || !bucketName) {
+    // Validate that at least one bucket is provided
+    if (!PDF_TO_PDF_BUCKET && !PDF_TO_HTML_BUCKET) {
       throw new Error(
-        'Both GitHub token and bucket name are required! Pass them using `-c githubToken=<token> -c bucketName=<name>`'
+        "At least one bucket name is required! Pass using -c PDF_TO_PDF_BUCKET=<name> or -c PDF_TO_HTML_BUCKET=<name>"
       );
     }
 
-    const bucket = s3.Bucket.fromBucketName(this, 'ImportedBucket', bucketName);
-    console.log(`Using bucket: ${bucket.bucketName}`);
-    
-    const githubToken_secret_manager = new secretsmanager.Secret(this, 'GitHubToken', {
-      secretName: 'pdfui-github-token',
-      description: 'GitHub Personal Access Token for Amplify',
-      secretStringValue: cdk.SecretValue.unsafePlainText(githubToken)
+    // Import buckets independently
+    let pdfBucket: s3.IBucket | undefined;
+    let htmlBucket: s3.IBucket | undefined;
+
+    if (PDF_TO_PDF_BUCKET) {
+      pdfBucket = s3.Bucket.fromBucketName(this, 'PDFBucket', PDF_TO_PDF_BUCKET);
+      console.log(`Using PDF-to-PDF bucket: ${pdfBucket.bucketName}`);
+    }
+
+    if (PDF_TO_HTML_BUCKET) {
+      htmlBucket = s3.Bucket.fromBucketName(this, 'HTMLBucket', PDF_TO_HTML_BUCKET);
+      console.log(`Using PDF-to-HTML bucket: ${htmlBucket.bucketName}`);
+    }
+
+    // Use the first available bucket as the main bucket for other resources
+    const mainBucket = pdfBucket || htmlBucket!;
+    console.log(`Using main bucket for other resources: ${mainBucket.bucketName}`);
+
+    // --------- Create Amplify App for Manual Deployment ----------
+    const amplifyApp = new amplify.App(this, 'pdfui-amplify-app', {
+      description: 'PDF Accessibility UI - Manual Deployment',
+      // No sourceCodeProvider for manual deployment
     });
 
-    // --------- Create Amplify App (WITHOUT referencing the domain yet) ----------
-    const amplifyApp = new amplify.App(this, 'pdfui', {
-      sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: 'ASUCICREPO',
-        repository: 'PDF_accessability_UI',
-        oauthToken: githubToken_secret_manager.secretValue
-      }),
-      buildSpec: cdk.aws_codebuild.BuildSpec.fromObjectToYaml({
-        version: '1.0',
-        frontend: {
-          phases: {
-            preBuild: {
-              commands: ['cd pdf_ui', 'npm ci']
-            },
-            build: {
-              commands: ['npm run build']
-            }
-          },
-          artifacts: {
-            baseDirectory: 'pdf_ui/build',
-            files: ['**/*']
-          },
-          cache: {
-            paths: ['pdf_ui/node_modules/**/*']
-          }
-        }
-      }),
-    });
-
-    // VERY VERY IMPORANT THIS RULE IS STILL IMPORANT BUT PLEASE KEEP IN MIND THIS RULE NEEDS TO BE ADDED 
-    // AFTER THE APPLICATION IS DONE BUILDING AND NEEDS TO BE DELETED BEFORE DEPLOYING A NEW UPDATE 
-    // AND THEN NEEDS TO BE RE ADDED
-
-    // amplifyApp.addCustomRule({
-    //   source: '/<*>',
-    //   target: '/index.html',
-    //   status: amplify.RedirectStatus.REWRITE
-    // });
-
-
-    // Create main branch
+    // Create main branch for manual deployment
     const mainBranch = amplifyApp.addBranch('main', {
-      autoBuild: true,
+      autoBuild: false, // Manual deployment
       stage: 'PRODUCTION'
     });
 
-    const domainPrefix = 'pdf-ui-auth'; // must be globally unique in that region
+    // Add redirect rules for SPA routing
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/home',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/callback',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    amplifyApp.addCustomRule(new amplify.CustomRule({
+      source: '/app',
+      target: '/index.html',
+      status: amplify.RedirectStatus.REWRITE
+    }));
+
+    const domainPrefix = `pdf-ui-auth${Math.random().toString(36).substring(2, 8)}`; // must be globally unique in that region
     const Default_Group = 'DefaultUsers';
     const Amazon_Group = 'AmazonUsers';
     const Admin_Group = 'AdminUsers';
@@ -149,6 +150,8 @@ export class CdkBackendStack extends cdk.Stack {
         country: new cognito.StringAttribute({ mutable: true }),
         state: new cognito.StringAttribute({ mutable: true }),
         city: new cognito.StringAttribute({ mutable: true }),
+        pdf2pdf: new cognito.NumberAttribute({ mutable: true }),
+        pdf2html: new cognito.NumberAttribute({ mutable: true }),
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       lambdaTriggers: {
@@ -248,6 +251,15 @@ export class CdkBackendStack extends cdk.Stack {
       ),
     });
 
+    // Create S3 policy for both buckets
+    const s3Resources: string[] = [];
+    if (pdfBucket) {
+      s3Resources.push(pdfBucket.bucketArn + '/*');
+    }
+    if (htmlBucket) {
+      s3Resources.push(htmlBucket.bucketArn + '/*');
+    }
+
     authenticatedRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -256,9 +268,7 @@ export class CdkBackendStack extends cdk.Stack {
           's3:PutObjectAcl',
           's3:GetObject',
         ],
-        resources: [
-          bucket.bucketArn + '/*',
-        ],
+        resources: s3Resources,
       }),
     );
 
@@ -345,9 +355,17 @@ export class CdkBackendStack extends cdk.Stack {
     const Authority = `cognito-idp.${this.region}.amazonaws.com/${userPool.userPoolId}`;
 
     // ------------------ Pass environment variables to Amplify ------------------
-    mainBranch.addEnvironment('REACT_APP_BUCKET_NAME', bucket.bucketName);
+    mainBranch.addEnvironment('REACT_APP_BUCKET_NAME', mainBucket.bucketName);
     mainBranch.addEnvironment('REACT_APP_BUCKET_REGION', this.region);
     mainBranch.addEnvironment('REACT_APP_AWS_REGION', this.region);
+
+    // Separate buckets for different formats - use provided buckets independently
+    if (PDF_TO_PDF_BUCKET) {
+      mainBranch.addEnvironment('REACT_APP_PDF_BUCKET_NAME', PDF_TO_PDF_BUCKET);
+    }
+    if (PDF_TO_HTML_BUCKET) {
+      mainBranch.addEnvironment('REACT_APP_HTML_BUCKET_NAME', PDF_TO_HTML_BUCKET);
+    }
     
     mainBranch.addEnvironment('REACT_APP_USER_POOL_ID', userPool.userPoolId);
     mainBranch.addEnvironment('REACT_APP_AUTHORITY', Authority);
@@ -359,8 +377,6 @@ export class CdkBackendStack extends cdk.Stack {
 
     mainBranch.addEnvironment('REACT_APP_UPDATE_FIRST_SIGN_IN', updateAttributesApi.urlForPath('/update-first-sign-in'));
     mainBranch.addEnvironment('REACT_APP_UPLOAD_QUOTA_API', updateAttributesApi.urlForPath('/upload-quota'));
-    // Grant Amplify permission to read the secret
-    githubToken_secret_manager.grantRead(amplifyApp);
 
 
      // ------------------- Integration of UpdateAttributesGroups Lambda -------------------
@@ -433,6 +449,11 @@ export class CdkBackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserPoolDomain', { value: domainPrefix });
     new cdk.CfnOutput(this, 'IdentityPoolId', { value: identityPool.ref });
     new cdk.CfnOutput(this, 'AuthenticatedRole', { value: authenticatedRole.roleArn });
+    new cdk.CfnOutput(this, 'AmplifyAppId', {
+      value: amplifyApp.appId,
+      description: 'Amplify Application ID',
+    });
+
     new cdk.CfnOutput(this, 'AmplifyAppURL', {
       value: appUrl,
       description: 'Amplify Application URL',

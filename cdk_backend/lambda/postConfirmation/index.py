@@ -4,7 +4,10 @@ import boto3
 
 def handler(event, context):
     print('Post Confirmation Trigger Event:', json.dumps(event, indent=2))
-
+    if event['triggerSource'] != 'PostConfirmation_ConfirmSignUp':
+        print(f"Skipping initialization - trigger source is {event['triggerSource']}")
+        return event
+    
     # Retrieve group names from environment variables
     DEFAULT_GROUP = str(os.environ.get('DEFAULT_GROUP_NAME'))
     AMAZON_GROUP = str(os.environ.get('AMAZON_GROUP_NAME'))
@@ -15,21 +18,21 @@ def handler(event, context):
         DEFAULT_GROUP: {
             'custom:first_sign_in': 'true',
             'custom:total_files_uploaded': '0',
-            'custom:max_files_allowed': '3',
+            'custom:max_files_allowed': '8',
             'custom:max_pages_allowed': '10',
             'custom:max_size_allowed_MB': '25'
         },
         AMAZON_GROUP: {
             'custom:first_sign_in': 'true',
             'custom:total_files_uploaded': '0',
-            'custom:max_files_allowed': '5',
+            'custom:max_files_allowed': '15',
             'custom:max_pages_allowed': '10',
             'custom:max_size_allowed_MB': '25'
         },
         ADMIN_GROUP: {
             'custom:first_sign_in': 'true',
             'custom:total_files_uploaded': '0',
-            'custom:max_files_allowed': '10000',
+            'custom:max_files_allowed': '100',
             'custom:max_pages_allowed': '2500',
             'custom:max_size_allowed_MB': '1000'
         }

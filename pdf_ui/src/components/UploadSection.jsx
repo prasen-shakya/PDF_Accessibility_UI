@@ -20,9 +20,25 @@ function sanitizeFilename(filename, format = 'pdf') {
   // eslint-disable-next-line
   let sanitized = withoutDiacritics.replace(/[^\u0000-\u00FF]/g, '');
   
-  // For PDF2HTML, replace + symbols and spaces with underscores to match backend expectations
+  // For PDF2HTML, apply comprehensive sanitization to match Bedrock Data Automation constraints
   if (format === 'html') {
-    sanitized = sanitized.replace(/\+/g, '_').replace(/\s/g, '_');
+    // Replace spaces with underscores
+    sanitized = sanitized.replace(/\s/g, '_');
+    
+    // Replace characters that violate Bedrock Data Automation S3 URI constraints
+    // Pattern disallows: \x00-\x1F (control chars), \x7F (DEL), { ^ } % ` ] " > [ ~ < # |
+    // Also replace other problematic characters: & \ * ? / $ ! ' : @ + =
+    // eslint-disable-next-line no-control-regex
+    const problematicChars = /[\x00-\x1F\x7F{^}%`\]">[~<#|&\\*?/$!'":@+=]/g;
+    sanitized = sanitized.replace(problematicChars, '_');
+    
+    // Replace multiple consecutive underscores with a single one
+    while (sanitized.includes('__')) {
+      sanitized = sanitized.replace(/__/g, '_');
+    }
+    
+    // Remove leading/trailing underscores
+    sanitized = sanitized.replace(/^_+|_+$/g, '');
   }
   
   // If the sanitized filename is empty, return a default value.

@@ -126,10 +126,33 @@ const ProcessingContainer = ({
           },
         });
 
-        // Use different paths based on format - ensure underscores for HTML format
-        let objectKey = selectedFormat === 'html'
-          ? `remediated/final_${updatedFilename.replace('.pdf', '.zip').replace(/\+/g, '_').replace(/\s/g, '_')}`
-          : `result/COMPLIANT_${updatedFilename}`;
+        // Use different paths based on format - apply comprehensive sanitization for HTML only
+        let objectKey;
+        if (selectedFormat === 'html') {
+          // Sanitize filename for HTML format to match Bedrock Data Automation constraints
+          const sanitizeForS3 = (filename) => {
+            let sanitized = filename;
+            // Replace spaces with underscores
+            sanitized = sanitized.replace(/\s/g, '_');
+            // Replace characters that violate Bedrock Data Automation S3 URI constraints
+            // Pattern disallows: \x00-\x1F (control chars), \x7F (DEL), { ^ } % ` ] " > [ ~ < # |
+            // Also replace other problematic characters: & \ * ? / $ ! ' : @ + =
+            // eslint-disable-next-line no-control-regex
+            const problematicChars = /[\x00-\x1F\x7F{^}%`\]">[~<#|&\\*?/$!'":@+=]/g;
+            sanitized = sanitized.replace(problematicChars, '_');
+            // Replace multiple consecutive underscores with a single one
+            while (sanitized.includes('__')) {
+              sanitized = sanitized.replace(/__/g, '_');
+            }
+            // Remove leading/trailing underscores
+            sanitized = sanitized.replace(/^_+|_+$/g, '');
+            return sanitized;
+          };
+          objectKey = `remediated/final_${sanitizeForS3(updatedFilename.replace('.pdf', '.zip'))}`;
+        } else {
+          // PDF format uses original filename without extra sanitization
+          objectKey = `result/COMPLIANT_${updatedFilename}`;
+        }
 
         console.log(`🔍 Polling attempt ${pollingAttempts + 1}/${MAX_POLLING_ATTEMPTS} for object key:`, objectKey);
 

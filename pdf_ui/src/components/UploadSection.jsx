@@ -11,14 +11,20 @@ import './UploadSection.css';
 
 import { region, PDFBucket, HTMLBucket, CheckAndIncrementQuota, validateBucketConfiguration, validateFormatBucket } from '../utilities/constants';
 
-function sanitizeFilename(filename) {
+function sanitizeFilename(filename, format = 'pdf') {
   // Normalize the filename to decompose accented characters
   const normalized = filename.normalize('NFD');
   // Remove combining diacritical marks
   const withoutDiacritics = normalized.replace(/[\u0300-\u036f]/g, '');
   // Remove any characters outside of the ISO-8859-1 range.
   // eslint-disable-next-line
-  const sanitized = withoutDiacritics.replace(/[^\u0000-\u00FF]/g, '');
+  let sanitized = withoutDiacritics.replace(/[^\u0000-\u00FF]/g, '');
+  
+  // For PDF2HTML, replace + symbols and spaces with underscores to match backend expectations
+  if (format === 'html') {
+    sanitized = sanitized.replace(/\+/g, '_').replace(/\s/g, '_');
+  }
+  
   // If the sanitized filename is empty, return a default value.
   return sanitized.trim() ? sanitized : 'default.pdf';
 }
@@ -246,7 +252,7 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, ''); // YYYYMMDDTHHMMSS format
       const userEmail = auth.user?.profile?.email || 'user'; // Use email for unique filename, fallback to 'user'
       const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumerics with underscores
-      const sanitizedFileName = sanitizeFilename(file.name) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails
+      const sanitizedFileName = sanitizeFilename(file.name, selectedFormat) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format

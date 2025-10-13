@@ -128,7 +128,7 @@ const ProcessingContainer = ({
 
         // Use different paths based on format - ensure underscores for HTML format
         let objectKey = selectedFormat === 'html'
-          ? `remediated/final_${updatedFilename.replace('.pdf', '.zip').replace(/\s/g, '_')}`
+          ? `remediated/final_${updatedFilename.replace('.pdf', '.zip').replace(/\+/g, '_').replace(/\s/g, '_')}`
           : `result/COMPLIANT_${updatedFilename}`;
 
         console.log(`🔍 Polling attempt ${pollingAttempts + 1}/${MAX_POLLING_ATTEMPTS} for object key:`, objectKey);

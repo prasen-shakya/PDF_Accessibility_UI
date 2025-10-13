@@ -11,14 +11,36 @@ import './UploadSection.css';
 
 import { region, PDFBucket, HTMLBucket, CheckAndIncrementQuota, validateBucketConfiguration, validateFormatBucket } from '../utilities/constants';
 
-function sanitizeFilename(filename) {
+function sanitizeFilename(filename, format = 'pdf') {
   // Normalize the filename to decompose accented characters
   const normalized = filename.normalize('NFD');
   // Remove combining diacritical marks
   const withoutDiacritics = normalized.replace(/[\u0300-\u036f]/g, '');
   // Remove any characters outside of the ISO-8859-1 range.
   // eslint-disable-next-line
-  const sanitized = withoutDiacritics.replace(/[^\u0000-\u00FF]/g, '');
+  let sanitized = withoutDiacritics.replace(/[^\u0000-\u00FF]/g, '');
+  
+  // For PDF2HTML, apply comprehensive sanitization to match Bedrock Data Automation constraints
+  if (format === 'html') {
+    // Replace spaces with underscores
+    sanitized = sanitized.replace(/\s/g, '_');
+    
+    // Replace characters that violate Bedrock Data Automation S3 URI constraints
+    // Pattern disallows: \x00-\x1F (control chars), \x7F (DEL), { ^ } % ` ] " > [ ~ < # |
+    // Also replace other problematic characters: & \ * ? / $ ! ' : @ + =
+    // eslint-disable-next-line no-control-regex
+    const problematicChars = /[\x00-\x1F\x7F{^}%`\]">[~<#|&\\*?/$!'":@+=]/g;
+    sanitized = sanitized.replace(problematicChars, '_');
+    
+    // Replace multiple consecutive underscores with a single one
+    while (sanitized.includes('__')) {
+      sanitized = sanitized.replace(/__/g, '_');
+    }
+    
+    // Remove leading/trailing underscores
+    sanitized = sanitized.replace(/^_+|_+$/g, '');
+  }
+  
   // If the sanitized filename is empty, return a default value.
   return sanitized.trim() ? sanitized : 'default.pdf';
 }
@@ -246,7 +268,7 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, ''); // YYYYMMDDTHHMMSS format
       const userEmail = auth.user?.profile?.email || 'user'; // Use email for unique filename, fallback to 'user'
       const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_'); // Replace non-alphanumerics with underscores
-      const sanitizedFileName = sanitizeFilename(file.name) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails
+      const sanitizedFileName = sanitizeFilename(file.name, selectedFormat) || 'default.pdf'; // Fallback to 'default.pdf' if sanitization fails
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format

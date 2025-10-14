@@ -1,22 +1,22 @@
 // App.jsx
-import React, { useState } from 'react';
+import { ThemeProvider } from "@mui/material/styles";
+import { useState } from "react";
+import { AuthProvider, useAuth } from "react-oidc-context";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { isMaintenanceMode } from "./utilities/constants.jsx";
+
+import theme from "./theme";
 import {
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { AuthProvider, useAuth } from 'react-oidc-context';
-import {isMaintenanceMode} from './utilities/constants.jsx';
+  Authority,
+  HostedUIUrl,
+  UserPoolClientId,
+} from "./utilities/constants";
 
-import theme from './theme';
-import { UserPoolClientId, HostedUIUrl, Authority } from './utilities/constants';
+import LandingPage from "./pages/LandingPage";
 
-import LandingPage from './pages/LandingPage';
-
-import MainApp from './MainApp';
-import CallbackPage from './pages/CallbackPage'; 
-import MaintenancePage from './pages/MaintenancePage';
+import MainApp from "./MainApp";
+import CallbackPage from "./pages/CallbackPage";
+import MaintenancePage from "./pages/MaintenancePage";
 
 const cognitoAuthConfig = {
   authority: `https://${Authority}`,
@@ -25,8 +25,8 @@ const cognitoAuthConfig = {
   post_logout_redirect_uri: `${HostedUIUrl}/home`,
   // redirect_uri: 'http://localhost:3000/callback', // Local redirect_uri
   // post_logout_redirect_uri: 'http://localhost:3000/home',
-  response_type: 'code',
-  scope: 'email openid phone profile',
+  response_type: "code",
+  scope: "email openid phone profile",
 };
 
 function AppRoutes() {
@@ -38,7 +38,7 @@ function AppRoutes() {
   }
 
   if (auth.error) {
-    console.error('Authentication error:', auth.error);
+    console.error("Authentication error:", auth.error);
     return <div>Authentication Error: {auth.error.message}</div>;
   }
 
@@ -48,7 +48,7 @@ function AppRoutes() {
       <Route path="/home" element={<LandingPage />} />
 
       {/* Callback Route */}
-      <Route path="/callback" element={<CallbackPage />} /> 
+      <Route path="/callback" element={<CallbackPage />} />
 
       {/* Protected App Routes */}
       <Route
@@ -75,8 +75,8 @@ function App() {
   return (
     <AuthProvider {...cognitoAuthConfig}>
       <ThemeProvider theme={theme}>
-          {/* <AppRoutes /> */}
-          {isMaintenanceMode ? <MaintenancePage /> : <AppRoutes />}
+        {/* <AppRoutes /> */}
+        {isMaintenanceMode ? <MaintenancePage /> : <AppRoutes />}
       </ThemeProvider>
     </AuthProvider>
   );

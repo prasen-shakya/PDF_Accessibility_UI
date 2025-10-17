@@ -35,19 +35,19 @@
 }
 
 .flow-indicator {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 12px;
   line-height: 16px;
-  color: #8c1d40;
-  background-color: #fef2f2;
+  color: #004c97;
+  background-color: #c4dcf5;
   padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid #fecaca;
+  border: 1px solid #7eb6ed;
 }
 
 .processing-header h2 {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 18px;
   line-height: 28px;
@@ -67,7 +67,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -75,7 +75,7 @@
 }
 
 .processing-description {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -102,7 +102,7 @@
 
 .progress-fill {
   height: 100%;
-  background-color: #8c1d40;
+  background-color: #004c97;
   border-radius: 100px;
   transition: width 0.3s ease;
 }
@@ -127,7 +127,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 16px;
   line-height: 16px;
@@ -138,13 +138,12 @@
 }
 
 .step-number.active {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
   border: none;
   transform: scale(1.1);
   transition: all 0.3s ease;
 }
-
 
 .step-content {
   flex: 1;
@@ -154,7 +153,7 @@
 }
 
 .step-title {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 20px;
@@ -162,7 +161,7 @@
 }
 
 .step-description {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -174,7 +173,7 @@
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 12px 16px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -192,12 +191,12 @@
 }
 
 .upload-new-btn {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
   border: none;
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 20px;
@@ -206,7 +205,7 @@
 }
 
 .upload-new-btn:hover {
-  background-color: #732a3a;
+  background-color: #014182;
   transform: translateY(-1px);
 }
 
@@ -231,13 +230,14 @@
   padding: 0;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   animation: slideIn 0.3s ease-out;
   overflow: hidden;
 }
 
 .confirm-header {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
@@ -245,7 +245,7 @@
 
 .confirm-header h3 {
   margin: 0;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 18px;
   line-height: 28px;
@@ -258,7 +258,7 @@
 
 .confirm-body p {
   margin: 0 0 12px 0;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
@@ -285,7 +285,7 @@
   padding: 10px 16px;
   border-radius: 8px;
   border: none;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 20px;
@@ -305,12 +305,12 @@
 }
 
 .confirm-btn-primary {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
 }
 
 .confirm-btn-primary:hover {
-  background-color: #732a3a;
+  background-color: #003d7a;
   transform: translateY(-1px);
 }
 

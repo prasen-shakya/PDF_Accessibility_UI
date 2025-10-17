@@ -51,7 +51,7 @@ fi
 # 2. Ensure IAM service role exists
 # --------------------------------------------------
 
-ROLE_NAME="${PROJECT_NAME}-service-role"
+ROLE_NAME="pdf-ui-service-role"
 echo "Checking for IAM role: $ROLE_NAME"
 
 if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import './ResultsContainer.css';
-import img1 from "../assets/zap.svg";
-import AccessibilityChecker from './AccessibilityChecker';
+import { useState } from "react";
+import AccessibilityChecker from "./AccessibilityChecker";
+import "./ResultsContainer.css";
 
 const ResultsContainer = ({
   fileName,
@@ -12,7 +11,7 @@ const ResultsContainer = ({
   originalFileName,
   updatedFilename,
   awsCredentials,
-  onNewUpload
+  onNewUpload,
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -20,7 +19,7 @@ const ResultsContainer = ({
 
   // Function to format processing time
   const formatProcessingTime = (seconds) => {
-    if (!seconds || seconds < 0) return 'Processing completed';
+    if (!seconds || seconds < 0) return "Processing completed";
 
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -33,35 +32,35 @@ const ResultsContainer = ({
 
   const handleDownload = async () => {
     if (!processedResult || !format || !fileName) {
-      alert('Download information not available');
+      alert("Download information not available");
       return;
     }
 
     setIsDownloading(true);
     try {
-      console.log('Starting download for:', { fileName, format });
+      console.log("Starting download for:", { fileName, format });
 
       // Use the download URL passed from ProcessingContainer
       const downloadUrl = processedResult.url;
 
       if (!downloadUrl) {
-        throw new Error('No download URL received');
+        throw new Error("No download URL received");
       }
 
-      console.log('Using download URL:', downloadUrl);
+      console.log("Using download URL:", downloadUrl);
 
       // Method 1: Try window.open first (bypasses React Router)
-      const downloadWindow = window.open(downloadUrl, '_blank');
+      const downloadWindow = window.open(downloadUrl, "_blank");
 
       // Fallback: If popup blocked, use temporary link method
       if (!downloadWindow || downloadWindow.closed) {
-        console.log('Popup blocked, using link method');
+        console.log("Popup blocked, using link method");
 
         // Method 2: Create temporary link and force download
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = downloadUrl;
-        link.target = '_blank';
-        link.style.display = 'none';
+        link.target = "_blank";
+        link.style.display = "none";
 
         // Add to DOM, click, and remove
         document.body.appendChild(link);
@@ -76,20 +75,22 @@ const ResultsContainer = ({
         }, 1000);
       }
 
-      console.log('Download initiated successfully');
-
+      console.log("Download initiated successfully");
     } catch (error) {
-      console.error('Download failed:', error);
+      console.error("Download failed:", error);
 
       // Provide more specific error messages
-      let errorMessage = 'Download failed. Please try again.';
+      let errorMessage = "Download failed. Please try again.";
 
-      if (error.message.includes('File not found')) {
-        errorMessage = 'File not ready yet. Please wait for processing to complete.';
-      } else if (error.message.includes('Access denied')) {
-        errorMessage = 'Access denied. Please check permissions or contact support.';
-      } else if (error.message.includes('credentials')) {
-        errorMessage = 'Authentication error. Please refresh the page and try again.';
+      if (error.message.includes("File not found")) {
+        errorMessage =
+          "File not ready yet. Please wait for processing to complete.";
+      } else if (error.message.includes("Access denied")) {
+        errorMessage =
+          "Access denied. Please check permissions or contact support.";
+      } else if (error.message.includes("credentials")) {
+        errorMessage =
+          "Authentication error. Please refresh the page and try again.";
       }
 
       alert(errorMessage);
@@ -98,7 +99,6 @@ const ResultsContainer = ({
     }
   };
 
-
   return (
     <>
       <div className="results-container">
@@ -106,23 +106,30 @@ const ResultsContainer = ({
           <div className="results-header">
             <h2>PDF Remediation Successful</h2>
             <div className="flow-indicator">
-              {format === 'html' ? 'PDF → HTML' : 'PDF → PDF'}
+              {format === "html" ? "PDF → HTML" : "PDF → PDF"}
             </div>
           </div>
 
           <div className="processing-info">
             <div className="processing-time">
-              <img alt="" className="block max-w-none size-full" src={img1} />
-              <span>Total Processing Time: {formatProcessingTime(processingTime)}</span>
+              <span>
+                Total Processing Time: {formatProcessingTime(processingTime)}
+              </span>
             </div>
-            <p className="description">Your PDF has been successfully remediated for accessibility</p>
+            <p className="description">
+              Your PDF has been successfully remediated for accessibility
+            </p>
           </div>
 
           <div className="file-success-container">
             <div className="file-info-card">
               <div className="file-name-section">
                 <div className="file-icon">
-                  <img alt="" className="block max-w-none size-full" src={require("../assets/pdf-icon.svg")} />
+                  <img
+                    alt=""
+                    className="block max-w-none size-full"
+                    src={require("../assets/pdf-icon.svg")}
+                  />
                 </div>
                 <div className="file-details">
                   <div className="file-name">{fileName}</div>
@@ -133,8 +140,11 @@ const ResultsContainer = ({
           </div>
 
           <div className="button-group">
-            {format === 'pdf' && (
-              <button className="view-report-btn" onClick={() => setShowReportDialog(true)}>
+            {format === "pdf" && (
+              <button
+                className="view-report-btn"
+                onClick={() => setShowReportDialog(true)}
+              >
                 View Report
               </button>
             )}
@@ -142,27 +152,33 @@ const ResultsContainer = ({
               className="download-btn"
               onClick={handleDownload}
               disabled={isDownloading || !processedResult}
-              title={isDownloading ? 'Downloading...' : 'Download the processed file'}
+              title={
+                isDownloading ? "Downloading..." : "Download the processed file"
+              }
             >
-              {isDownloading ? 'Downloading...' : `Download ${format === 'html' ? 'ZIP' : 'PDF'} File`}
+              {isDownloading
+                ? "Downloading..."
+                : `Download ${format === "html" ? "ZIP" : "PDF"} File`}
             </button>
           </div>
+        </div>
 
-                        </div>
-
-      {/* Accessibility Report Dialog - Only for PDF-PDF format */}
-      {format === 'pdf' && (
-        <AccessibilityChecker
-          originalFileName={originalFileName || fileName}
-          updatedFilename={updatedFilename}
-          awsCredentials={awsCredentials}
-          open={showReportDialog}
-          onClose={() => setShowReportDialog(false)}
-        />
-      )}
+        {/* Accessibility Report Dialog - Only for PDF-PDF format */}
+        {format === "pdf" && (
+          <AccessibilityChecker
+            originalFileName={originalFileName || fileName}
+            updatedFilename={updatedFilename}
+            awsCredentials={awsCredentials}
+            open={showReportDialog}
+            onClose={() => setShowReportDialog(false)}
+          />
+        )}
 
         <div className="upload-new-section">
-          <button className="upload-new-btn" onClick={() => setShowConfirmDialog(true)}>
+          <button
+            className="upload-new-btn"
+            onClick={() => setShowConfirmDialog(true)}
+          >
             Upload a New PDF
           </button>
         </div>
@@ -170,14 +186,19 @@ const ResultsContainer = ({
 
       {/* Custom Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="confirm-overlay" onClick={() => setShowConfirmDialog(false)}>
+        <div
+          className="confirm-overlay"
+          onClick={() => setShowConfirmDialog(false)}
+        >
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="confirm-header">
               <h3>Confirm New Upload</h3>
             </div>
             <div className="confirm-body">
               <p>Are you sure you want to upload a new PDF?</p>
-              <p className="confirm-warning">This will discard the current PDF and start a new session.</p>
+              <p className="confirm-warning">
+                This will discard the current PDF and start a new session.
+              </p>
             </div>
             <div className="confirm-actions">
               <button

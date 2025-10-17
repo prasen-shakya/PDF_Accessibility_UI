@@ -29,7 +29,7 @@
 }
 
 .results-content h2 {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 24px;
   line-height: 32px;
@@ -39,11 +39,11 @@
 }
 
 .flow-indicator {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 12px;
   line-height: 16px;
-  color: #8c1d40;
+  color: #004c97;
   background-color: #fef2f2;
   padding: 4px 8px;
   border-radius: 4px;
@@ -62,7 +62,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -70,7 +70,7 @@
 }
 
 .description {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -108,7 +108,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #8c1d40;
+  background-color: #004c97;
   border-radius: 10px;
   flex-shrink: 0;
 }
@@ -125,7 +125,7 @@
 }
 
 .file-name {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 16px;
   line-height: 24px;
@@ -136,7 +136,7 @@
 }
 
 .file-status {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -147,7 +147,7 @@
 }
 
 .file-status::before {
-  content: '✓';
+  content: "✓";
   font-size: 16px;
   color: #059669;
 }
@@ -160,7 +160,7 @@
   padding: 8px 16px;
   background-color: #f8fafc;
   border-radius: 8px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -177,14 +177,14 @@
 
 .view-report-btn {
   background-color: #ffffff;
-  border: 2px solid #8c1d40;
+  border: 2px solid #004c97;
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 16px;
   line-height: 20px;
-  color: #8c1d40;
+  color: #004c97;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -194,16 +194,16 @@
 
 .view-report-btn:hover:not(:disabled) {
   background-color: #fef7f7;
-  border-color: #7a1a37;
-  color: #7a1a37;
+  border-color: #004c97;
+  color: #004c97;
 }
 
 .download-btn {
-  background-color: #8c1d40;
+  background-color: #004c97;
   border: none;
   border-radius: 8px;
   padding: 12px 24px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 16px;
   line-height: 20px;
@@ -216,7 +216,7 @@
 }
 
 .download-btn:hover:not(:disabled) {
-  background-color: #7a1a37;
+  background-color: #004c97;
 }
 
 .download-btn:disabled,
@@ -246,13 +246,14 @@
   padding: 0;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   animation: slideIn 0.3s ease-out;
   overflow: hidden;
 }
 
 .confirm-header {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
@@ -260,7 +261,7 @@
 
 .confirm-header h3 {
   margin: 0;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 18px;
   line-height: 28px;
@@ -273,7 +274,7 @@
 
 .confirm-body p {
   margin: 0 0 12px 0;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
@@ -300,7 +301,7 @@
   padding: 10px 16px;
   border-radius: 8px;
   border: none;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 20px;
@@ -320,12 +321,12 @@
 }
 
 .confirm-btn-primary {
-  background-color: #8c1d40;
+  background-color: #004c97;
   color: white;
 }
 
 .confirm-btn-primary:hover {
-  background-color: #732a3a;
+  background-color: #02407f;
   transform: translateY(-1px);
 }
 

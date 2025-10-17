@@ -105,7 +105,7 @@
 }
 
 .upload-main-text {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -114,7 +114,7 @@
 }
 
 .upload-sub-text {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -162,7 +162,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 16px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -173,17 +173,17 @@
 }
 
 .change-format-btn:hover {
-  border-color: #8c1d40;
+  border-color: #004c97;
   box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
 }
 
 .upload-btn {
   flex: 1;
-  background-color: #8c1d40;
+  background-color: #004c97;
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -194,7 +194,7 @@
 }
 
 .upload-btn:hover {
-  background-color: #7a1a37;
+  background-color: rgb(24, 104, 183);
 }
 
 .disclaimer {
@@ -206,7 +206,7 @@
 }
 
 .disclaimer p {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
@@ -239,7 +239,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -267,7 +267,7 @@
 
 .progress-fill {
   height: 100%;
-  background-color: #8c1d40;
+  background-color: #004c97;
   border-radius: 100px;
   transition: width 0.3s ease;
 }
@@ -277,7 +277,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 16px;
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -289,7 +289,7 @@
 }
 
 .change-file-btn:hover {
-  border-color: #8c1d40;
+  border-color: #004c97;
   box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
 }
 
@@ -317,10 +317,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #004c97;
 }
 
 .upload-title h2 {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 18px;
   line-height: 28px;
@@ -361,12 +362,12 @@
 }
 
 .format-option:hover {
-  border-color: #8c1d40;
+  border-color: #004c97;
   box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
 }
 
 .format-option.selected {
-  border-color: #8c1d40;
+  border-color: #004c97;
   box-shadow: 0 2px 8px rgba(140, 29, 64, 0.15);
   background-color: #fef7f7;
 }
@@ -399,7 +400,7 @@
 }
 
 .format-name {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 20px;
@@ -408,7 +409,7 @@
 }
 
 .format-description {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
@@ -425,7 +426,7 @@
 }
 
 .format-status {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 12px;
   line-height: 16px;
@@ -449,7 +450,7 @@
 }
 
 .upload-error p {
-  font-family: 'Geist', sans-serif;
+  font-family: "Geist", sans-serif;
   font-weight: 500;
   font-size: 14px;
   line-height: 20px;
@@ -466,7 +467,7 @@
 
 .upload-btn:disabled:hover,
 .change-file-btn:disabled:hover {
-  background-color: #8c1d40;
+  background-color: #004c97;
   border-color: #cbd5e1;
   box-shadow: none;
 }
@@ -488,7 +489,7 @@
 .troubleshoot-link {
   background: none;
   border: none;
-  color: #8c1d40;
+  color: #004c97;
   text-decoration: underline;
   cursor: pointer;
   font-size: 14px;

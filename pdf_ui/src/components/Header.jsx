@@ -1,6 +1,4 @@
 // src/components/Header.js
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MenuIcon from "@mui/icons-material/Menu";
 import {
   AppBar,
@@ -119,7 +117,7 @@ function Header({
           }}
         >
           {/* Display usage + progress bar */}
-          {isMobile ? (
+          {/* {isMobile ? (
             <Box
               sx={{
                 display: "flex",
@@ -215,9 +213,9 @@ function Header({
                     usageCount
                   )} out of ${formatNumber(maxFilesAllowed)} files uploaded`}
                 />
-              )}
+              )} 
             </Box>
-          )}
+          )}*/}
 
           {/* Optional: "Refresh Usage" button */}
           {/* Uncomment the button below if you want to allow manual refreshing from the header */}

@@ -9,6 +9,7 @@ import Header from "./components/Header";
 import HeroSection from "./components/HeroSection";
 import LeftNav from "./components/LeftNav";
 import ProcessingContainer from "./components/ProcessingContainer";
+import RemediatedFilesContainer from "./components/RemediatedFilesContainer";
 import ResultsContainer from "./components/ResultsContainer";
 import UploadSection from "./components/UploadSection";
 import theme from "./theme";
@@ -30,8 +31,6 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   // Centralized Usage State
   const [usageCount, setUsageCount] = useState(0);
-  const [pdf2pdfCount, setPdf2pdfCount] = useState(0);
-  const [pdf2htmlCount, setPdf2htmlCount] = useState(0);
   const [maxFilesAllowed, setMaxFilesAllowed] = useState(3); // Default value
   const [maxPagesAllowed, setMaxPagesAllowed] = useState(10); // Default value
   const [maxSizeAllowedMB, setMaxSizeAllowedMB] = useState(25); // Default value
@@ -41,6 +40,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   // Deployment validation state
   const [showDeploymentPopup, setShowDeploymentPopup] = useState(false);
   const [bucketValidation, setBucketValidation] = useState(null);
+
+  // For refreshing remediated files list after upload
+  const [refreshFilesFlag, setRefreshFilesFlag] = useState(false);
 
   // Left navigation state
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
@@ -112,11 +114,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
       const data = await res.json();
       setUsageCount(data.currentUsage ?? 0);
-      setPdf2pdfCount(data.pdf2pdfCount ?? 0);
-      setPdf2htmlCount(data.pdf2htmlCount ?? 0);
       setMaxFilesAllowed(data.maxFilesAllowed ?? 3);
-      setMaxPagesAllowed(data.maxPagesAllowed ?? 10);
-      setMaxSizeAllowedMB(data.maxSizeAllowedMB ?? 25);
+      //setMaxPagesAllowed(data.maxPagesAllowed ?? 10);
+      setMaxPagesAllowed(100);
+      //setMaxSizeAllowedMB(data.maxSizeAllowedMB ?? 25);
+      setMaxSizeAllowedMB(50);
     } catch (err) {
       setUsageError(`Failed to fetch usage: ${err.message}`);
     } finally {
@@ -189,6 +191,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
     setProcessedResult({ ...result, processingTime });
     setCurrentPage("results");
+
+    setRefreshFilesFlag((prev) => !prev); // Trigger refresh of remediated files
   };
 
   const handleNewUpload = () => {
@@ -308,6 +312,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
                 onNewUpload={handleNewUpload}
               />
             )}
+
+            <RemediatedFilesContainer
+              awsCredentials={awsCredentials}
+              refreshFlag={refreshFilesFlag}
+            />
           </Container>
         </Box>
       </Box>

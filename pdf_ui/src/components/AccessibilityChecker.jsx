@@ -1,4 +1,10 @@
 // src/components/AccessibilityChecker.js
+import {
+  GetObjectCommand,
+  HeadObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
@@ -22,14 +28,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-import {
-  GetObjectCommand,
-  HeadObjectCommand,
-  S3Client,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 import { PDFBucket, region } from "../utilities/constants";
 
 function AccessibilityChecker({
@@ -99,12 +97,8 @@ function AccessibilityChecker({
   );
 
   /**
-   * Generate a presigned URL to directly download the JSON report from S3 with a specified filename.
-   * @param {string} key - The S3 object key.
-   * @param {string} filename - The desired filename for the downloaded file.
-   * @returns {Promise<string>} - The presigned URL.
+   * Generate a presigned URL for direct download
    */
-
   const generatePresignedUrl = useCallback(
     async (key, filename) => {
       if (!s3) {
@@ -117,47 +111,34 @@ function AccessibilityChecker({
         Key: key,
         ResponseContentDisposition: `attachment; filename="${filename}"`,
       });
-      return await getSignedUrl(s3, command, { expiresIn: 30000 }); // 8.33 hour expiration
+      return await getSignedUrl(s3, command, { expiresIn: 30000 }); // 8.3 hours
     },
     [s3]
   );
 
   /**
-   * Fetch the "before" report with retry mechanism
+   * Fetch BEFORE report
    */
   const fetchBeforeReport = useCallback(
     async (retries = 3) => {
-      // Check if S3 client is available
-      if (!s3) {
-        console.error("Cannot fetch BEFORE report - S3 client not initialized");
-        return;
-      }
-
+      if (!s3) return;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          // First fetch the JSON data
           const data = await fetchJsonFromS3(beforeReportKey);
           setBeforeReport(data);
-
-          // Then generate a presigned URL for that JSON file
           setIsBeforeUrlLoading(true);
           const presignedUrl = await generatePresignedUrl(
             beforeReportKey,
             desiredFilenameBefore
           );
           setBeforeReportUrl(presignedUrl);
-          return; // Success, exit the retry loop
+          return;
         } catch (error) {
           console.log(
             `Attempt ${attempt}/${retries} failed for BEFORE report:`,
             error.message
           );
-          if (attempt === retries) {
-            console.error("All attempts failed for BEFORE report");
-          } else {
-            // Wait 2 seconds before retry
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
+          if (attempt < retries) await new Promise((r) => setTimeout(r, 2000));
         } finally {
           setIsBeforeUrlLoading(false);
         }
@@ -173,42 +154,28 @@ function AccessibilityChecker({
   );
 
   /**
-   * Fetch the "after" report with retry mechanism
+   * Fetch AFTER report
    */
   const fetchAfterReport = useCallback(
     async (retries = 3) => {
-      // Check if S3 client is available
-      if (!s3) {
-        console.error("Cannot fetch AFTER report - S3 client not initialized");
-        return;
-      }
-
+      if (!s3) return;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          // Fetch the JSON data
           const data = await fetchJsonFromS3(afterReportKey);
           setAfterReport(data);
-
-          // Generate a presigned URL for downloading the AFTER report
           setIsAfterUrlLoading(true);
           const presignedUrl = await generatePresignedUrl(
             afterReportKey,
             desiredFilenameAfter
           );
           setAfterReportUrl(presignedUrl);
-
-          return; // Success, exit the retry loop
+          return;
         } catch (error) {
           console.log(
             `Attempt ${attempt}/${retries} failed for AFTER report:`,
             error.message
           );
-          if (attempt === retries) {
-            console.error("All attempts failed for AFTER report");
-          } else {
-            // Wait 2 seconds before retry
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
+          if (attempt < retries) await new Promise((r) => setTimeout(r, 2000));
         } finally {
           setIsAfterUrlLoading(false);
         }
@@ -223,28 +190,17 @@ function AccessibilityChecker({
     ]
   );
 
-  /**
-   * Handle dialog close
-   */
-  const handleClose = () => {
-    onClose();
-  };
+  const handleClose = () => onClose();
 
-  /**
-   * Fetch reports when dialog opens
-   */
   useEffect(() => {
     if (open && updatedFilename && s3) {
-      console.log("Dialog opened, fetching reports...");
       fetchBeforeReport();
       fetchAfterReport();
-    } else if (open && updatedFilename && !s3) {
-      console.error("Cannot fetch reports - S3 client not available");
     }
   }, [open, updatedFilename, fetchBeforeReport, fetchAfterReport, s3]);
 
   /**
-   * Renders a summary table (Before/After) if available
+   * Summary block renderer (Before / After)
    */
   const renderSummary = (report, label) => {
     if (!report) return null;
@@ -252,11 +208,32 @@ function AccessibilityChecker({
     if (!Summary) return null;
 
     return (
-      <Box sx={{ margin: "1rem 0", flex: 1 }}>
-        <Typography variant="h6" sx={{ color: "#1976d2", fontWeight: "bold" }}>
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#fafafa",
+          border: "1px solid #ddd",
+          borderRadius: 2,
+          p: 2,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{ color: "#1976d2", fontWeight: "bold", mb: 1 }}
+        >
           {`${label} Summary`}
         </Typography>
-        <Table size="small" sx={{ border: "1px solid #ddd", borderRadius: 2 }}>
+        <Table
+          size="small"
+          sx={{
+            border: "1px solid #ddd",
+            borderRadius: 2,
+            flexGrow: 1,
+          }}
+        >
           <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
             <TableRow>
               <TableCell>Description</TableCell>
@@ -285,10 +262,9 @@ function AccessibilityChecker({
   };
 
   /**
-   * Renders the detailed report comparison table
+   * Detailed comparison
    */
   const renderDetailedReport = () => {
-    // If the BEFORE report isn't fetched yet, show a spinner
     if (!beforeReport) return <CircularProgress />;
 
     const categories = Object.keys(beforeReport["Detailed Report"] || {});
@@ -296,18 +272,18 @@ function AccessibilityChecker({
       const beforeItems = beforeReport["Detailed Report"][category] || [];
       const afterItems = afterReport?.["Detailed Report"]?.[category] || [];
       const allRules = new Set([
-        ...beforeItems.map((item) => item.Rule),
-        ...afterItems.map((item) => item.Rule),
+        ...beforeItems.map((i) => i.Rule),
+        ...afterItems.map((i) => i.Rule),
       ]);
-      const afterMap = afterItems.reduce((acc, item) => {
-        acc[item.Rule] = item;
+      const afterMap = afterItems.reduce((acc, i) => {
+        acc[i.Rule] = i;
         return acc;
       }, {});
 
       return (
         <Accordion
           key={category}
-          sx={{ border: "1px solid #ddd", margin: "0.5rem 0" }}
+          sx={{ border: "1px solid #ddd", mt: "0.5rem" }}
         >
           <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
@@ -331,7 +307,6 @@ function AccessibilityChecker({
                 {Array.from(allRules).map((rule) => {
                   const beforeItem = beforeItems.find((i) => i.Rule === rule);
                   const afterItem = afterMap[rule];
-
                   return (
                     <TableRow key={rule}>
                       <TableCell>{rule}</TableCell>
@@ -389,7 +364,6 @@ function AccessibilityChecker({
         </Typography>
 
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          {/* Download BEFORE JSON button */}
           <Button
             variant="outlined"
             color="primary"
@@ -402,7 +376,6 @@ function AccessibilityChecker({
             Before
           </Button>
 
-          {/* Download AFTER JSON button */}
           <Button
             variant="outlined"
             color="primary"
@@ -420,26 +393,39 @@ function AccessibilityChecker({
           </IconButton>
         </Box>
       </DialogTitle>
+
       <DialogContent>
         <Box>
-          <Box sx={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-            {renderSummary(beforeReport, "Before")}
-            {renderSummary(afterReport, "After")}
+          <Box
+            sx={{
+              display: "flex",
+              gap: "2rem",
+              flexWrap: "wrap",
+              alignItems: "stretch",
+            }}
+          >
+            <Box sx={{ flex: 1, display: "flex" }}>
+              {renderSummary(beforeReport, "Before")}
+            </Box>
+            <Box sx={{ flex: 1, display: "flex" }}>
+              {renderSummary(afterReport, "After")}
+            </Box>
           </Box>
 
           <Typography
             variant="h5"
-            sx={{ marginTop: "2rem", color: "#1565c0", fontWeight: "bold" }}
+            sx={{ mt: "2rem", color: "#1565c0", fontWeight: "bold" }}
           >
             Detailed Report
           </Typography>
+
           {(!beforeReport || !afterReport) && (
             <Typography variant="body2" color="textSecondary">
               Loading accessibility reports...
             </Typography>
           )}
 
-          <Box sx={{ marginTop: "1rem" }}>{renderDetailedReport()}</Box>
+          <Box sx={{ mt: "1rem" }}>{renderDetailedReport()}</Box>
         </Box>
       </DialogContent>
 
@@ -448,7 +434,7 @@ function AccessibilityChecker({
           display: "flex",
           justifyContent: "flex-end",
           gap: 2,
-          padding: "1rem",
+          p: "1rem",
         }}
       >
         <Button onClick={handleClose} variant="contained">

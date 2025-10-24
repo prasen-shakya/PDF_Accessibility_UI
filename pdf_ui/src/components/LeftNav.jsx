@@ -115,17 +115,13 @@ const LeftNav = ({
               </Box>
               <Divider sx={{ marginBottom: 2 }} />
               <Typography variant="body2" gutterBottom>
-                - Documents cannot exceed <strong>10 pages</strong>.
+                - Large documents with many images or complex formatting may
+                <strong> take longer or fail to remediate.</strong>
               </Typography>
               <Typography variant="body2" gutterBottom>
-                - Documents must be smaller than <strong>25 MB</strong>.
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                - Do not upload documents containing{" "}
-                <strong>sensitive information</strong>.
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                - Do not <strong>bulk upload</strong> documents.
+                - If a document takes longer than a few minutes to remediate,
+                try <strong>splitting the PDF into smaller sections</strong>,
+                and uploading those sections.
               </Typography>
               <Typography variant="body2" gutterBottom>
                 - Complete remediation for <strong>one document</strong> before

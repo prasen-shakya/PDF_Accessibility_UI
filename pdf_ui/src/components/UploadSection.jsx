@@ -1,7 +1,6 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Alert, Snackbar } from "@mui/material";
 import { motion } from "framer-motion";
-import { PDFDocument } from "pdf-lib";
 import React, { useRef, useState } from "react";
 import { useAuth } from "react-oidc-context"; // to get user sub if needed
 import imgCodeXml from "../assets/pdf-html.svg";
@@ -149,25 +148,25 @@ function UploadSection({
       return;
     }
 
-    if (file.size > maxSizeAllowedMB * 1024 * 1024) {
-      setErrorMessage(`File size exceeds the ${maxSizeAllowedMB} MB limit.`);
-      setOpenSnackbar(true);
-      resetFileInput();
-      return;
-    }
+    // if (file.size > maxSizeAllowedMB * 1024 * 1024) {
+    //   setErrorMessage(`File size exceeds the ${maxSizeAllowedMB} MB limit.`);
+    //   setOpenSnackbar(true);
+    //   resetFileInput();
+    //   return;
+    // }
 
     // **2. Page Count Check with pdf-lib**
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const numPages = pdfDoc.getPageCount();
+      //const arrayBuffer = await file.arrayBuffer();
+      //const pdfDoc = await PDFDocument.load(arrayBuffer);
+      //const numPages = pdfDoc.getPageCount();
 
-      if (numPages > maxPagesAllowed) {
-        setErrorMessage(`PDF file cannot exceed ${maxPagesAllowed} pages.`);
-        setOpenSnackbar(true);
-        resetFileInput();
-        return;
-      }
+      // if (numPages > maxPagesAllowed) {
+      //   setErrorMessage(`PDF file cannot exceed ${maxPagesAllowed} pages.`);
+      //   setOpenSnackbar(true);
+      //   resetFileInput();
+      //   return;
+      // }
 
       setSelectedFile(file);
       console.log("File object details:", {
@@ -223,13 +222,13 @@ function UploadSection({
     }
 
     // **2. Check if user has reached the upload limit**
-    if (currentUsage >= maxFilesAllowed) {
-      setErrorMessage(
-        "You have reached your upload limit. Please contact support for further assistance."
-      );
-      setOpenSnackbar(true);
-      return;
-    }
+    // if (currentUsage >= maxFilesAllowed) {
+    //   setErrorMessage(
+    //     "You have reached your upload limit. Please contact support for further assistance."
+    //   );
+    //   setOpenSnackbar(true);
+    //   return;
+    // }
 
     // **3. Basic Guards**
     if (!file) {
@@ -423,6 +422,10 @@ function UploadSection({
                 This solution does not remediate for fillable forms and color
                 selection/ contrast for people with color blindness
               </p>
+              <p>
+                If the remediation process takes longer than expected (e.g.,
+                more than a few minutes), the PDF may be large or complex.
+              </p>
             </div>
           </div>
 
@@ -468,10 +471,10 @@ function UploadSection({
               <p className="upload-main-text">
                 Drop your PDF here or click to browse
               </p>
-              <p className="upload-sub-text">
+              {/* <p className="upload-sub-text">
                 Maximum file size: {maxSizeAllowedMB}MB • Maximum pages:{" "}
                 {maxPagesAllowed}
-              </p>
+              </p> */}
             </div>
 
             {errorMessage && (
@@ -499,8 +502,13 @@ function UploadSection({
 
           <div className="disclaimer">
             <p>
-              This solution does not remediate for fillable forms and color
-              selection/ contrast for people with color blindness
+              *This solution does not remediate for fillable forms and color
+              selection/ contrast for people with color blindness.
+            </p>
+            <p>
+              *If the remediation process takes longer than expected (e.g., more
+              than a few minutes), the PDF may be large or complex, please try
+              another file.
             </p>
           </div>
         </div>

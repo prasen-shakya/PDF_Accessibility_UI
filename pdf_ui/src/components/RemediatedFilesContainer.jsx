@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import AccessibilityChecker from "../components/AccessibilityChecker"; // ✅ import added
-import { PDFBucket, region } from "../utilities/constants";
+import { HTMLBucket, PDFBucket, region } from "../utilities/constants";
 import "./RemediatedFilesContainer.css";
 
 // Convert S3 sanitized filename back to readable
@@ -87,62 +87,84 @@ const RemediatedFilesContainer = ({ awsCredentials, refreshFlag }) => {
     const userEmail = auth.user?.profile?.email;
     const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, "_");
 
-    const params = {
+    const s3 = new S3Client({
+      region,
+      credentials: awsCredentials,
+    });
+
+    const pdfParams = {
       Bucket: PDFBucket,
       Prefix: `result/COMPLIANT_${sanitizedEmail}`,
     };
+    const htmlParams = {
+      Bucket: HTMLBucket,
+      Prefix: `output/${sanitizedEmail}`,
+    };
 
-    const s3 = new S3Client({
-      region,
-      credentials: {
-        accessKeyId: awsCredentials.accessKeyId,
-        secretAccessKey: awsCredentials.secretAccessKey,
-        sessionToken: awsCredentials.sessionToken,
-      },
-    });
-
-    const fetchRemediatedFiles = async () => {
-      try {
-        const command = new ListObjectsV2Command(params);
-        const response = await s3.send(command);
-
-        if (response.Contents && response.Contents.length > 0) {
-          const fileList = await Promise.all(
-            response.Contents.map(async (item) => {
-              const fullKey = item.Key;
-              const fileName = fullKey.split("/").pop();
-              const readableName = normalizePdfFilename(fileName);
-              const url = await generatePresignedUrl(
-                PDFBucket,
-                fullKey,
-                readableName
-              );
-
-              return {
-                key: fullKey,
-                name: readableName,
-                date: formatDate(item.LastModified),
-                download_link: url,
-                originalFileName: fileName
-                  .replace(/^COMPLIANT_/, "")
-                  .replace(sanitizedEmail, ""), // 👈 Added for AccessibilityChecker
-                updatedFilename: fileName.replace(/^COMPLIANT_/, ""), // 👈 Added for AccessibilityChecker
-              };
-            })
+    const fetchPDF = async () => {
+      const response = await s3.send(new ListObjectsV2Command(pdfParams));
+      if (!response.Contents) return [];
+      return Promise.all(
+        response.Contents.map(async (item) => {
+          const fileName = item.Key.split("/").pop();
+          const readableName = normalizePdfFilename(fileName);
+          const url = await generatePresignedUrl(
+            PDFBucket,
+            item.Key,
+            readableName
           );
+          return {
+            key: item.Key,
+            name: readableName,
+            date: formatDate(item.LastModified),
+            download_link: url,
+            originalFileName: fileName
+              .replace(/^COMPLIANT_/, "")
+              .replace(sanitizedEmail, ""),
+            updatedFilename: fileName.replace(/^COMPLIANT_/, ""),
+          };
+        })
+      );
+    };
 
-          // Sort by newest first
-          fileList.sort((a, b) => new Date(b.date) - new Date(a.date));
-          setFiles(fileList);
-        } else {
-          setFiles([]);
-        }
-      } catch (error) {
-        console.error("Error fetching remediated files:", error);
+    const fetchHTML = async () => {
+      const response = await s3.send(new ListObjectsV2Command(htmlParams));
+      if (!response.Contents) return [];
+      return Promise.all(
+        response.Contents.map(async (item) => {
+          const fileName = item.Key.split("/").pop();
+          const readableName = normalizePdfFilename(fileName);
+          const url = await generatePresignedUrl(
+            HTMLBucket,
+            item.Key,
+            readableName
+          );
+          return {
+            key: item.Key,
+            name: readableName,
+            date: formatDate(item.LastModified),
+            download_link: url,
+          };
+        })
+      );
+    };
+
+    const loadAll = async () => {
+      try {
+        const [pdfFiles, htmlFiles] = await Promise.all([
+          fetchPDF(),
+          fetchHTML(),
+        ]);
+        const allFiles = [...pdfFiles, ...htmlFiles].sort(
+          (a, b) => new Date(b.date) - new Date(a.date)
+        );
+        setFiles(allFiles);
+      } catch (err) {
+        console.error("Error fetching remediated files:", err);
       }
     };
 
-    fetchRemediatedFiles();
+    loadAll();
   }, [awsCredentials, auth.user, generatePresignedUrl, refreshFlag]);
 
   return (
@@ -221,23 +243,25 @@ const RemediatedFilesContainer = ({ awsCredentials, refreshFlag }) => {
                 </div>
 
                 <div style={{ display: "flex", gap: "12px" }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      borderColor: "#004c97",
-                      color: "#004c97",
-                      textTransform: "none",
-                      fontWeight: 500,
-                      "&:hover": {
+                  {file.name.endsWith(".pdf") && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{
                         borderColor: "#004c97",
-                        backgroundColor: "#e0f2fe",
-                      },
-                    }}
-                    onClick={() => handleOpenChecker(file)} // 👈 open dialog instead
-                  >
-                    View Report
-                  </Button>
+                        color: "#004c97",
+                        textTransform: "none",
+                        fontWeight: 500,
+                        "&:hover": {
+                          borderColor: "#004c97",
+                          backgroundColor: "#e0f2fe",
+                        },
+                      }}
+                      onClick={() => handleOpenChecker(file)} // 👈 open dialog instead
+                    >
+                      View Report
+                    </Button>
+                  )}
 
                   <Button
                     variant="contained"

@@ -15,7 +15,7 @@ const ResultsContainer = ({
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  //const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Function to format processing time
   const formatProcessingTime = (seconds) => {
@@ -175,17 +175,14 @@ const ResultsContainer = ({
         )}
 
         <div className="upload-new-section">
-          <button
-            className="upload-new-btn"
-            onClick={() => setShowConfirmDialog(true)}
-          >
+          <button className="upload-new-btn" onClick={() => onNewUpload()}>
             Upload a New PDF
           </button>
         </div>
       </div>
 
       {/* Custom Confirmation Dialog */}
-      {showConfirmDialog && (
+      {/* {showConfirmDialog && (
         <div
           className="confirm-overlay"
           onClick={() => setShowConfirmDialog(false)}
@@ -219,7 +216,7 @@ const ResultsContainer = ({
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </>
   );
 };

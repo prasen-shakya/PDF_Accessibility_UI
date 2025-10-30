@@ -139,6 +139,10 @@ const LeftNav = ({
                 </strong>
                 .
               </Typography>
+              <Typography variant="body2" gutterBottom>
+                - Files are temporarily stored and will be{" "}
+                <strong>automatically deleted after 24 hours. </strong>
+              </Typography>
             </CardContent>
           </Card>
         )}

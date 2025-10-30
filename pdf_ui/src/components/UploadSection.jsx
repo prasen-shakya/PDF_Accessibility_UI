@@ -417,16 +417,11 @@ function UploadSection({
               </div>
             </div>
 
-            <div className="disclaimer">
+            {/* <div className="disclaimer">
               <p>
-                This solution does not remediate for fillable forms and color
-                selection/ contrast for people with color blindness
+                * Make sure to check the Document Requirements before you start!
               </p>
-              <p>
-                If the remediation process takes longer than expected (e.g.,
-                more than a few minutes), the PDF may be large or complex.
-              </p>
-            </div>
+            </div> */}
           </div>
 
           {/* Snackbar for error messages */}
@@ -499,18 +494,12 @@ function UploadSection({
               </button>
             </div>
           </div>
-
+          {/* 
           <div className="disclaimer">
             <p>
-              *This solution does not remediate for fillable forms and color
-              selection/ contrast for people with color blindness.
+              * Make sure to check the Document Requirements before you begin.
             </p>
-            <p>
-              *If the remediation process takes longer than expected (e.g., more
-              than a few minutes), the PDF may be large or complex, please try
-              another file.
-            </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Snackbar for error messages */}

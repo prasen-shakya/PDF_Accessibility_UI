@@ -45,8 +45,8 @@
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  max-width: 480px;
   margin: 0 auto;
+  max-width: 600px;
   box-sizing: border-box;
 }
 
@@ -203,6 +203,7 @@
   gap: 8px;
   align-items: flex-start;
   justify-content: flex-start;
+  width: 100%;
 }
 
 .disclaimer p {
@@ -212,7 +213,7 @@
   line-height: 24px;
   color: #475569;
   margin: 0;
-  width: 480px;
+  align-self: flex-start;
 }
 
 @media (max-width: 768px) {
